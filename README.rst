@@ -7,8 +7,19 @@ Python scheduled ringing of the school bell
 Configuration (json)
 ====================
 
-.. include:: school_bell/config.json
-  :language: JSON
+.. code-block:: JSON
+
+{
+    "schedule": {
+        "Mon": ["08:30", "12:00", "15:00"],
+        "Tue": ["08:30", "12:00", "15:00"],
+        "Wed": ["08:30", "12:00"],
+        "Thu": ["08:30", "12:00", "15:00"],
+        "Fri": ["08:30", "12:00", "15:00"]
+    },
+    "trigger": ["10.10.70.121"],
+    "wav": "SchoolBell-SoundBible.com-449398625.wav"
+}
 
 Licensing
 =========

@@ -1,0 +1,7 @@
+name: school-bell
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - gpiozero>=1.6
