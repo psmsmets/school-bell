@@ -6,12 +6,12 @@ After=multi-user.target
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/schoolbell/
+WorkingDirectory=/home/pi
 ExecStart=
-ExecStart=/usr/bin/python3 /home/pi/schoolbell/schoolbell.py
+ExecStart=/usr/bin/python3 /home/pi/school-bell/school_bell.py
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=schoolbell
+SyslogIdentifier=SchoolBell
 Restart=always
  
 [Install]

@@ -4,4 +4,4 @@ channels:
   - defaults
 dependencies:
   - python=3.9
-  - gpiozero>=1.6
+  - schedule-1.1.0

@@ -7,5 +7,5 @@
         "Fri": ["08:30", "12:00", "15:00"]
     },
     "trigger": ["10.10.70.121"],
-    "wav": "SchoolBell-SoundBible.com-449398625.wav"
+    "wav": "samples/SchoolBell-SoundBible.com-449398625.wav"
 }
