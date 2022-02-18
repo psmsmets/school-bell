@@ -7,7 +7,7 @@ Python scheduled ringing of the school bell
 Configuration (json)
 ====================
 
-.. literalinclude:: school_bell/config.json
+.. include:: school_bell/config.json
   :language: JSON
 
 Licensing
