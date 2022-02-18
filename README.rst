@@ -2,6 +2,7 @@
 School Bell
 *************************************
 
+Python scheduled ringing of the school bell
 
 Configuration (json)
 ====================
