@@ -6,6 +6,8 @@
         "Thu": ["08:30", "12:00", "15:00"],
         "Fri": ["08:30", "12:00", "15:00"]
     },
-    "trigger": ["10.10.70.121"],
+    "trigger": {
+        "pi@10.10.70.121": "aplay SchoolBell.wav &"
+    },
     "wav": "samples/SchoolBell-SoundBible.com-449398625.wav"
 }
