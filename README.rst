@@ -7,11 +7,6 @@ Python scheduled ringing of the school bell
 Configuration (JSON)
 ====================
 
-.. literalinclude:: config.json
-   :language: JSON
-   :linenos:
-
-
 .. code-block:: JSON
 
     {
@@ -27,6 +22,8 @@ Configuration (JSON)
         },
         "wav": "SchoolBell-SoundBible.com-449398625.wav"
     }
+
+The remote trigger requires an ``ssh-key`` to connect to the remote host!
 
 Licensing
 =========
