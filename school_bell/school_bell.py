@@ -120,7 +120,7 @@ def main():
     """
     # arguments
     parser = ArgumentParser(
-        prog='schoolbell',
+        prog='school-bell',
         description=('Python scheduled ringing of the school bell.'),
     )
     parser.add_argument(

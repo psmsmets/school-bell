@@ -15,12 +15,12 @@ Installation
 Usage
 =====
 
-Type ``schoolbell --help`` for the usage.
+Type ``school-bell --help`` for the usage.
 
 
 .. code-block:: bash
 
-    usage: schoolbell [-h] [-a ..] [-b [..]] [-c ..] [--debug] [--version]
+    usage: school-bell [-h] [-a ..] [-b [..]] [-c ..] [--debug] [--version]
 
     Python scheduled ringing of the school bell.
 
