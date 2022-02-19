@@ -7,6 +7,10 @@ Python scheduled ringing of the school bell
 Configuration (JSON)
 ====================
 
+.. literalinclude:: config.json
+  :language: JSON
+
+
 .. code-block:: JSON
 
     {
