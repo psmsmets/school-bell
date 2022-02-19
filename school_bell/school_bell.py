@@ -13,7 +13,7 @@ from time import sleep
 
 # Relative imports
 try:
-    from version import version
+    from .version import version
 except (ValueError, ModuleNotFoundError):
     version = 'VERSION-NOT-FOUND'
 
