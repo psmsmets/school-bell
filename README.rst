@@ -8,8 +8,8 @@ Configuration (JSON)
 ====================
 
 .. literalinclude:: config.json
-    :language: JSON
-    :linenos:
+   :language: JSON
+   :linenos:
 
 
 .. code-block:: JSON
