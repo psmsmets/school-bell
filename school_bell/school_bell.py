@@ -8,6 +8,7 @@ import os
 import schedule
 import sys
 from argparse import ArgumentParser
+from gpiozero import Buzzer
 from subprocess import Popen, PIPE
 from time import sleep
 
@@ -24,6 +25,16 @@ elif sys.platform == "darwin":
     _play = "afplay"
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
+
+
+def is_raspberry_pi():
+    """Checks if the device is a Rasperry Pi
+    """
+    if not os.path.exists('/proc/device-tree/model'):
+        return False
+    with open('/proc/device-tree/model') as f:
+        model = f.read()
+    return model.startswith('Raspberry Pi')
 
 
 def init_logger(debug):
@@ -45,15 +56,24 @@ def init_logger(debug):
     return logger
 
 
-def ring(wav, log):
+def ring(wav, buzzer, trigger, log):
     """Ring the school bell
     """
     log.info("ring!")
     log.debug(' '.join([_play, wav]))
 
+    for remote, command in trigger.items():
+        remote_ring(remote, command, log)
+
+    if buzzer:
+        buzzer.on()
+
     p = Popen([_play, wav], stdout=PIPE, stderr=PIPE)
 
     output, error = p.communicate()
+
+    if buzzer:
+        buzzer.off()
 
     log.debug(output.decode("utf-8"))
 
@@ -101,12 +121,16 @@ def main():
     # arguments
     parser = ArgumentParser(
         prog='schoolbell',
-        description=('Sensorboard serial readout with data storage'
-                     'in a local influx database.'),
+        description=('Python scheduled ringing of the school bell.'),
     )
     parser.add_argument(
         '-a', '--wav', metavar='..', type=str, default='schoolbell.wav',
         help='WAV audio file'
+    )
+    parser.add_argument(
+        '-b', '--buzz', metavar='..', type=int, nargs='?',
+        default=False, const=17,
+        help='Buzz via RPi GPIO while the WAV audio file plays'
     )
     parser.add_argument(
         '-c', '--config', metavar='..', type=str, default='config.json',
@@ -128,7 +152,7 @@ def main():
     log = init_logger(args.debug)
 
     # parse json config
-    log.debug(f"config = " + args.config)
+    log.info(f"config = {args.config}")
     if os.path.isfile(args.config):
         with open(args.config) as f:
             args.config = json.load(f)
@@ -138,19 +162,29 @@ def main():
     # set wav file
     if 'wav' in args.config:
         args.wav = args.config['wav']
-    log.debug("wav = " + args.wav)
+    log.info(f"wav = {args.wav}")
     if not os.path.isfile(args.wav):
         log.eror(f"{args.wav} not found!")
         raise FileNotFoundError(f"{args.wav} not found!")
 
+    # buzzer?
+    buzzer = False
+    log.info(f"buzzer = {args.buzz}")
+    if args.buzz:
+        if is_raspberry_pi():
+            buzzer = Buzzer(args.buzz)
+        else:
+            log.warning("Host is not a Raspberry Pi: buzzer disabled!")
+
     # test remote triggers
+    log.info(f"trigger = {'trigger' in args.config}")
     trigger = test_remote_trigger(
         args.config['trigger'] if 'trigger' in args.config else dict(), log
     )
 
     # ring wrapper
     def _ring():
-        ring(args.wav, log)
+        ring(args.wav, buzzer, trigger, log)
 
     # create schedule
     log.debug("schedule =")

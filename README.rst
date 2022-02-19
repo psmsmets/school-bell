@@ -2,7 +2,36 @@
 School Bell
 *************************************
 
-Python scheduled ringing of the school bell
+Python scheduled ringing of the school bell.
+
+Installation
+============
+
+.. code-block:: bash
+
+    pip install -e
+
+
+Usage
+=====
+
+Type ``schoolbell --help`` for the usage.
+
+
+.. code-block:: bash
+
+    usage: schoolbell [-h] [-a ..] [-b [..]] [-c ..] [--debug] [--version]
+
+    Python scheduled ringing of the school bell.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -a .., --wav ..       WAV audio file
+      -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays
+      -c .., --config ..    JSON configuration file
+      --debug               Make the operation a lot more talkative
+      --version             Print the version and exit
+
 
 Configuration (JSON)
 ====================
