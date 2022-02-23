@@ -1,7 +1,7 @@
 [Unit]
 Description=Scheduled school bell
 After=multi-user.target
- 
+
 [Service]
 Type=simple
 User=pi
@@ -13,8 +13,8 @@ ExecStart=
 ExecStart=/home/pi/.local/bin/school-bell -c /home/pi/schoolbell.json --debug
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=SchoolBell
+SyslogIdentifier=schoolbell
 Restart=always
- 
+
 [Install]
 WantedBy=multi-user.target
