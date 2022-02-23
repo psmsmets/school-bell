@@ -168,7 +168,7 @@ def main():
         args.wav = args.config['wav']
     args.wav = args.wav or 'SchoolBell-SoundBible.com-449398625.wav'
     if not os.path.isfile(args.wav):
-        wav = os.path.join([sys.exec_prefix, 'share', 'school-bell', args.wav])
+        wav = os.path.join(sys.exec_prefix, 'share', 'school-bell', args.wav)
         if os.path.isfile(wav):
             args.wav = wav
         else:
