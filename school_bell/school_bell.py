@@ -157,7 +157,10 @@ def main():
         with open(args.config) as f:
             args.config = json.load(f)
     else:
-        args.config = json.loads(args.config)
+        try:
+            args.config = json.loads(args.config)
+        except json.decoder.JSONDecodeError:
+            args.config = dict()
 
     # set wav file
     if 'wav' in args.config:
