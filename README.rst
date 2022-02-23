@@ -18,7 +18,7 @@ Usage
 Type ``school-bell --help`` for the usage.
 
 
-.. code-block:: bash
+.. code-block::
 
     usage: school-bell [-h] [-a ..] [-b [..]] [-c ..] [--debug] [--version]
 
@@ -61,8 +61,11 @@ Configure a clean RPi
 
 .. code-block:: sh
 
+    # upgrade existing packages
     sudo apt update
-    sudo apt upgrade
+    sudo apt upgrade -y
+
+    # install core packages
     sudo apt install -y git wget vim build-essential checkinstall
 
     # configure vim
@@ -112,7 +115,7 @@ Install Python packages in venv
     pip install --upgrade wheel
 
 
-Add aliased and venv to bashrc
+Add aliases and Python venv activation to ``~/.bashrc``
 
 .. code-block:: sh
 
