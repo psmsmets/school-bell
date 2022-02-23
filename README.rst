@@ -94,11 +94,11 @@ Check the status of the ``school-bell`` service
     Feb 23 15:21:28 pibell schoolbell[1192]: 2022-02-23 15:21:28,933 - school bell - INFO - Schedule started
 
 
-Logs are handled via ``syslog``
+Logs are handled via ``syslog``. Show all logs of today:
 
 .. code-block:: sh
 
-    journalctl -u school-bell
+    journalctl -u school-bell --since=today
     
 
 Configure a clean RPi
