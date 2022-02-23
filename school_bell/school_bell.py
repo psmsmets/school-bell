@@ -16,13 +16,13 @@ from time import sleep
 try:
     from .version import version
 except (ValueError, ModuleNotFoundError):
-    version = 'VERSION-NOT-FOUND'
+    version = "VERSION-NOT-FOUND"
 
 # Check platform
 if sys.platform in ("linux", "linux2"):
-    _play = "aplay"
+    _play = "/usr/bin/aplay"
 elif sys.platform == "darwin":
-    _play = "afplay"
+    _play = "/usr/bin/afplay"
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
 
@@ -30,23 +30,23 @@ elif sys.platform in ("win32", "win64"):
 def is_raspberry_pi():
     """Checks if the device is a Rasperry Pi
     """
-    if not os.path.exists('/proc/device-tree/model'):
+    if not os.path.exists("/proc/device-tree/model"):
         return False
-    with open('/proc/device-tree/model') as f:
+    with open("/proc/device-tree/model") as f:
         model = f.read()
-    return model.startswith('Raspberry Pi')
+    return model.startswith("Raspberry Pi")
 
 
 def init_logger(debug):
     """Create the logger object
     """
     # create logger
-    logger = logging.getLogger('school bell')
+    logger = logging.getLogger("school bell")
 
     # log to stdout
     streamHandler = logging.StreamHandler(sys.stdout)
     streamHandler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     ))
     logger.addHandler(streamHandler)
 
@@ -87,9 +87,10 @@ def remote_ring(remote, command, log):
     """Remote ring trigger
     """
     log.info(f"remote ring {remote}!")
-    log.debug(' '.join(['ssh', remote, f"'{command}'"]))
+    log.debug(' '.join(['/usr/bin/ssh', remote, f"'{command}'"]))
 
-    p = Popen(['ssh', remote, f"'{command}'"], stdout=PIPE, stderr=PIPE)
+    p = Popen(["/usr/bin/ssh", remote, f"'{command}'"],
+              stdout=PIPE, stderr=PIPE)
 
     output, error = p.communicate()
 
@@ -124,7 +125,7 @@ def main():
         description=('Python scheduled ringing of the school bell.'),
     )
     parser.add_argument(
-        '-a', '--wav', metavar='..', type=str, default='schoolbell.wav',
+        '-a', '--wav', metavar='..', type=str, default=None,
         help='WAV audio file'
     )
     parser.add_argument(
@@ -165,10 +166,15 @@ def main():
     # set wav file
     if 'wav' in args.config:
         args.wav = args.config['wav']
-    log.info(f"wav = {args.wav}")
+    args.wav = args.wav or 'SchoolBell-SoundBible.com-449398625.wav'
     if not os.path.isfile(args.wav):
-        log.error(f"{args.wav} not found!")
-        raise FileNotFoundError(f"{args.wav} not found!")
+        wav = os.path.join([sys.exec_prefix, 'share', 'school-bell', args.wav])
+        if os.path.isfile(wav):
+            args.wav = wav
+        else:
+            log.error(f"{args.wav} not found!")
+            raise FileNotFoundError(f"{args.wav} not found!")
+    log.info(f"wav = {args.wav}")
 
     # buzzer?
     buzzer = False
