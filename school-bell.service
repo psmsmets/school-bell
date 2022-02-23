@@ -6,9 +6,11 @@ After=multi-user.target
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi
+WorkingDirectory=/home/pi/
+Environment="VIRTUAL_ENV=/home/pi/.local"
+Environment="PATH=$VIRTUAL_ENV/bin:$PATH"
 ExecStart=
-ExecStart=/usr/bin/python3 /home/pi/school-bell/school_bell.py
+ExecStart=/home/pi/.local/bin/school-bell -c /home/pi/schoolbell.json --debug
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=SchoolBell
