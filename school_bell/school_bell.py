@@ -164,7 +164,7 @@ def main():
         args.wav = args.config['wav']
     log.info(f"wav = {args.wav}")
     if not os.path.isfile(args.wav):
-        log.eror(f"{args.wav} not found!")
+        log.error(f"{args.wav} not found!")
         raise FileNotFoundError(f"{args.wav} not found!")
 
     # buzzer?
