@@ -20,16 +20,18 @@ Type ``school-bell --help`` for the usage.
 
 .. code-block::
 
-    usage: school-bell [-h] [-a ..] [-b [..]] [-c ..] [--debug] [--version]
+    usage: school-bell [-h] [-b [..]] [--debug] [--demo] [--version] config
 
     Python scheduled ringing of the school bell.
 
+    positional arguments:
+      config                JSON configuration (string or file)
+
     optional arguments:
       -h, --help            show this help message and exit
-      -a .., --wav ..       WAV audio file
-      -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays
-      -c .., --config ..    JSON configuration file
+      -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays (default: False)
       --debug               Make the operation a lot more talkative
+      --demo                Print the demo JSON configuration and exit
       --version             Print the version and exit
 
 
