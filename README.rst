@@ -83,9 +83,9 @@ Check the status of the ``school-bell`` service
           Tasks: 1 (limit: 840)
             CPU: 762ms
          CGroup: /system.slice/school-bell.service
-                 └─1192 /home/pi/.local/bin/python3 /home/pi/.local/bin/school-bell -c /home/pi/schoolbell.json --debug
+                 └─1192 /home/pi/.local/bin/python3 /home/pi/.local/bin/school-bell /home/pi/school-bell.json --debug
 
-    Feb 23 15:21:28 pibell schoolbell[1192]: 2022-02-23 15:21:28,933 - school bell - INFO - Schedule started
+    Feb 23 15:21:28 pibell school-bell[1192]: 2022-02-23 15:21:28,933 - school bell - INFO - Schedule started
 
 
 Logs are handled via ``syslog``. Show all logs of today:
