@@ -10,10 +10,10 @@ WorkingDirectory=/home/pi/
 Environment="VIRTUAL_ENV=/home/pi/.local"
 Environment="PATH=$VIRTUAL_ENV/bin:$PATH"
 ExecStart=
-ExecStart=/home/pi/.local/bin/school-bell -c /home/pi/schoolbell.json --debug
+ExecStart=/home/pi/.local/bin/school-bell /home/pi/school-bell.json --debug
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=schoolbell
+SyslogIdentifier=school-bell
 Restart=always
 
 [Install]
