@@ -87,7 +87,7 @@ def ring(wav, buzzer, trigger, log):
     log.info("ring!")
 
     for remote, command in trigger.items():
-        remote_ring(remote, command, log)
+        remote_ring(remote, [command, wav], log)
 
     if buzzer:
         buzzer.on()
@@ -98,10 +98,10 @@ def ring(wav, buzzer, trigger, log):
         buzzer.off()
 
 
-def remote_ring(remote: str, command: str, log: logging.Logger):
+def remote_ring(remote: str, command: list, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    return system_call(['/usr/bin/ssh', remote, command], log)
+    return system_call(['/usr/bin/ssh', remote] + command, log)
 
 
 def test_remote_trigger(trigger, log):
@@ -109,7 +109,7 @@ def test_remote_trigger(trigger, log):
     """
     for remote in list(trigger.keys()):
 
-        success = remote_ring(remote, trigger[remote], log)
+        success = remote_ring(remote, [trigger[remote], '--help'], log)
 
         if not success:
             log.warning(f"remote ring test for {remote} failed!")
