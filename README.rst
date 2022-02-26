@@ -50,7 +50,8 @@ Configuration (JSON)
             "pi@10.10.70.121": "aplay"
         },
         "wav": {
-            0: "samples/SchoolBell-SoundBible.com-449398625.wav"
+            "0": "samples/SchoolBell-SoundBible.com-449398625.wav",
+            "1": "samples/ClassBell-SoundBible.com-1426436341.wav"
         }
     }
 
