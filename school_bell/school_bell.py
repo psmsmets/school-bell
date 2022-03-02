@@ -66,7 +66,7 @@ def system_call(command: list, log: logging.Logger):
 
     log.debug(' '.join(command))
 
-    p = Popen(command, stdout=PIPE, stderr=PIPE)
+    p = Popen(command, shell=False, stdout=PIPE, stderr=PIPE)
 
     output, error = p.communicate()
 
@@ -104,9 +104,11 @@ def ring(wav, buzzer, trigger, log):
 def remote_ring(remote: str, command: list, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    cmd = f"\'{' '.join(command)}\'"
-    remote_cmd = ["/usr/bin/ssh", "-o", "ConnectTimeout=1", remote, cmd]
-
+    # cmd = f"\'{' '.join(command)}\'"
+    remote_cmd = ["/usr/bin/ssh", "-t",
+                  "-o", "ConnectTimeout=1",
+                  "-o", "StrictHostKeyChecking=no",
+                  remote, command]
     return system_call(remote_cmd, log)
 
 
