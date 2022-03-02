@@ -100,6 +100,7 @@ Add aliases and Python venv activation to ``~/.bashrc``
     alias start='sudo systemctl start'
     alias stop='sudo systemctl stop'
     alias restart='sudo systemctl restart'
+    alias reload='sudo systemctl daemon-reload'
     alias reset-failed='sudo systemctl reset-failed'
 
     # venv
