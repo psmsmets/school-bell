@@ -10,10 +10,10 @@ Use `Rapberry Pi Imager`__ to install *Raspberry Pi OS Lite (32-bit)* on an micr
 .. __: https://www.raspberrypi.org/blog/raspberry-pi-imager-imaging-utility/
 
 Use the configuration tool to
-1. enable ssh on boot
-2. connect to your wireless network
 
-You can change the default username and password here as well.
+* enable ssh on boot
+* connect to your wireless network
+* set the username and password
 
 
 Connect
