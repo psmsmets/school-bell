@@ -101,7 +101,10 @@ def ring(wav, buzzer, trigger, log):
 def remote_ring(remote: str, command: list, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    return system_call(['/usr/bin/ssh', remote] + command, log)
+    return system_call(
+        ['/usr/bin/ssh', '-o', 'ConnectTimeout=1', remote] + command,
+        log
+    )
 
 
 def test_remote_trigger(trigger, log):
