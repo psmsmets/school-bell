@@ -58,12 +58,17 @@ def init_logger(prog, debug):
     return logger
 
 
-def system_call(command: list, log: logging.Logger):
+def system_call(command, log: logging.Logger):
     """Execute a system call. Returns `True` on success.
     """
-    log.debug(' '.join(command))
+    if isinstance(command, list):
+        command = ' '.join(command)
+    if not isinstance(command, str):
+        raise TypeError("command should either be a list or a string!")
 
-    p = Popen(command, stdout=PIPE, stderr=PIPE)
+    log.debug(command)
+
+    p = Popen([command], stdout=PIPE, stderr=PIPE)
 
     output, error = p.communicate()
 
@@ -87,7 +92,7 @@ def ring(wav, buzzer, trigger, log):
     log.info("ring!")
 
     for remote, command in trigger.items():
-        remote_ring(remote, [command, wav], log)
+        remote_ring(remote, f"{command} {wav}", log)
 
     if buzzer:
         buzzer.on()
@@ -101,12 +106,8 @@ def ring(wav, buzzer, trigger, log):
 def remote_ring(remote: str, command: str, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    command_wrapped = f"'{' '.join(command)}'"
-
-    return system_call(
-        ['/usr/bin/ssh', '-o', 'ConnectTimeout=1', remote, command_wrapped],
-        log
-    )
+    remote_cmd = f"/usr/bin/ssh -o ConnectTimeout=1 {remote} \'{command}\'"
+    return system_call(remote_cmd, log)
 
 
 def test_remote_trigger(trigger, log):
@@ -114,7 +115,7 @@ def test_remote_trigger(trigger, log):
     """
     for remote in list(trigger.keys()):
 
-        if remote_ring(remote, [trigger[remote], '--help'], log):
+        if remote_ring(remote, f"{trigger[remote]} --help", log):
             log.info(f"  remote ring {remote}")
 
         else:
