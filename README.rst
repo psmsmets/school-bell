@@ -110,7 +110,7 @@ Configure a RPi
 
 See the guide_ how to configure a Raspberry Pi from scratch.
 
-.. _guide: RPi-setup-guide.rst
+.. _guide: GUIDE.rst
 
 
 Licensing
