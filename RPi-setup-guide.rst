@@ -5,9 +5,9 @@ Configure a Raspberry Pi from scratch
 Prepare
 =======
 
-Use Rapberry Pi `Imager`_ to install *Raspberry Pi OS Lite (32-bit)* on an microSD card (16GB class 10 is fine).
+Use `Rapberry Pi Imager`__ to install *Raspberry Pi OS Lite (32-bit)* on an microSD card (16GB class 10 is fine).
 
-.. _Imager :: https://www.raspberrypi.org/blog/raspberry-pi-imager-imaging-utility/
+.. __: https://www.raspberrypi.org/blog/raspberry-pi-imager-imaging-utility/
 
 Use the configuration tool to
 1. enable ssh on boot
