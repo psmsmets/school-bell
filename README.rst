@@ -109,9 +109,9 @@ Logs are handled via ``syslog``. Show all logs of today:
 Configure a RPi
 ===============
 
-See guide_ how to configure a Raspberry Pi scratch.
+See the guide_ how to configure a Raspberry Pi from scratch.
 
-.. _guide: RPi-setup.rst
+.. _guide: RPi-setup-guide.rst
 
 
 Licensing
