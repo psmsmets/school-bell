@@ -58,17 +58,15 @@ def init_logger(prog, debug):
     return logger
 
 
-def system_call(command, log: logging.Logger):
+def system_call(command: list, log: logging.Logger):
     """Execute a system call. Returns `True` on success.
     """
     if isinstance(command, list):
-        command = ' '.join(command)
-    if not isinstance(command, str):
-        raise TypeError("command should either be a list or a string!")
+        raise TypeError("command should be a list!")
 
-    log.debug(command)
+    log.debug(' '.join(command))
 
-    p = Popen([command], stdout=PIPE, stderr=PIPE)
+    p = Popen(command, stdout=PIPE, stderr=PIPE)
 
     output, error = p.communicate()
 
@@ -92,7 +90,7 @@ def ring(wav, buzzer, trigger, log):
     log.info("ring!")
 
     for remote, command in trigger.items():
-        remote_ring(remote, f"{command} {wav}", log)
+        remote_ring(remote, [command, wav], log)
 
     if buzzer:
         buzzer.on()
@@ -103,10 +101,12 @@ def ring(wav, buzzer, trigger, log):
         buzzer.off()
 
 
-def remote_ring(remote: str, command: str, log: logging.Logger):
+def remote_ring(remote: str, command: list, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    remote_cmd = f"/usr/bin/ssh -o ConnectTimeout=1 {remote} \'{command}\'"
+    cmd = f"\'{' '.join(command)}\'"
+    remote_cmd = ["/usr/bin/ssh", "-o", "ConnectTimeout=1", remote, cmd]
+
     return system_call(remote_cmd, log)
 
 
@@ -115,7 +115,7 @@ def test_remote_trigger(trigger, log):
     """
     for remote in list(trigger.keys()):
 
-        if remote_ring(remote, f"{trigger[remote]} --help", log):
+        if remote_ring(remote, [trigger[remote], "--help"], log):
             log.info(f"  remote ring {remote}")
 
         else:
@@ -216,7 +216,7 @@ def main():
             log.error(err)
             raise FileNotFoundError(err)
         if not play(root_wav, log, test=True):
-            err = f"could not play {root_wav}!"
+            err = f"Could not play {root_wav}!"
             log.error(err)
             raise RuntimeError(err)
 
