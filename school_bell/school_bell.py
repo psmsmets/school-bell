@@ -39,11 +39,11 @@ def is_raspberry_pi():
     return model.startswith("Raspberry Pi")
 
 
-def init_logger(debug):
+def init_logger(prog, debug):
     """Create the logger object
     """
     # create logger
-    logger = logging.getLogger("school bell")
+    logger = logging.getLogger(prog)
 
     # log to stdout
     streamHandler = logging.StreamHandler(sys.stdout)
@@ -137,11 +137,12 @@ class DemoConfig(argparse.Action):
 def main():
     """Main script function.
     """
+
+    prog = 'school-bell'
+    info = 'Python scheduled ringing of the school bell.'
+
     # arguments
-    parser = argparse.ArgumentParser(
-        prog='school-bell',
-        description=('Python scheduled ringing of the school bell.'),
-    )
+    parser = argparse.ArgumentParser(prog=prog, description=info)
     parser.add_argument(
         '-b', '--buzz', metavar='..', type=int, nargs='?',
         default=False, const=17,
@@ -168,7 +169,11 @@ def main():
     args = parser.parse_args()
 
     # create logger object
-    log = init_logger(args.debug)
+    log = init_logger(prog, args.debug)
+
+    # header
+    log.info(info)
+    log.info(f"version = {version}")
 
     # parse json config
     log.info(f"config = {args.config}")
@@ -196,6 +201,7 @@ def main():
 
     # get root
     root = args.config['root'] if 'root' in args.config else ''
+    log.info(f"root = {root}")
 
     # verify wav
     log.info("wav =")
@@ -207,7 +213,7 @@ def main():
             log.error(err)
             raise FileNotFoundError(err)
         if not play(root_wav, log, test=True):
-            err = f"could not play {wav}!"
+            err = f"could not play {root_wav}!"
             log.error(err)
             raise RuntimeError(err)
 
