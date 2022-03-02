@@ -110,7 +110,7 @@ def test_remote_trigger(trigger, log):
     for remote in list(trigger.keys()):
 
         if remote_ring(remote, [trigger[remote], '--help'], log):
-            log.info(f"remote ring test for {remote} passed")
+            log.info(f"  remote ring {remote}")
 
         else:
             log.warning(f"remote ring test for {remote} failed!")
