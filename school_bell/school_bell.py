@@ -11,6 +11,7 @@ import sys
 from gpiozero import Buzzer
 from subprocess import Popen, PIPE
 from time import sleep
+from threading import Thread
 
 # Relative imports
 try:
@@ -89,13 +90,20 @@ def ring(wav, buzzer, trigger, log):
     """
     log.info("ring!")
 
+    threads = []
     for remote, command in trigger.items():
-        remote_ring(remote, [command, wav, '&'], log)
+        threads.append(Thread(target=remote_ring,
+                              args=(remote, [command, wav, '&'], log)))
+    threads.append(Thread(target=play, args=(wav, log)))
 
     if buzzer:
         buzzer.on()
 
-    play(wav, log)
+    for t in threads:
+        t.start()
+
+    for t in threads:
+        t.join()
 
     if buzzer:
         buzzer.off()
@@ -260,7 +268,7 @@ def main():
     log.info('Schedule started')
     while True:
         schedule.run_pending()
-        sleep(.1)
+        sleep(.5)
 
 
 if __name__ == "__main__":
