@@ -58,7 +58,7 @@ def init_logger(prog, debug):
     return logger
 
 
-def system_call(command: list, log: logging.Logger):
+def system_call(command: list, log: logging.Logger, **kwargs):
     """Execute a system call. Returns `True` on success.
     """
     if not isinstance(command, list):
@@ -66,7 +66,7 @@ def system_call(command: list, log: logging.Logger):
 
     log.debug(' '.join(command))
 
-    p = Popen(command, shell=False, stdout=PIPE, stderr=PIPE)
+    p = Popen(command, stdout=PIPE, stderr=PIPE, **kwargs)
 
     output, error = p.communicate()
 
@@ -90,7 +90,7 @@ def ring(wav, buzzer, trigger, log):
     log.info("ring!")
 
     for remote, command in trigger.items():
-        remote_ring(remote, [command, wav], log)
+        remote_ring(remote, [command, wav, '&'], log)
 
     if buzzer:
         buzzer.on()
@@ -101,15 +101,15 @@ def ring(wav, buzzer, trigger, log):
         buzzer.off()
 
 
-def remote_ring(remote: str, command: list, log: logging.Logger):
+def remote_ring(host: str, command: list, log: logging.Logger):
     """Remote ring over ssh. Returns `True` on success.
     """
-    # cmd = f"\'{' '.join(command)}\'"
-    remote_cmd = ["/usr/bin/ssh", "-t",
-                  "-o", "ConnectTimeout=1",
-                  "-o", "StrictHostKeyChecking=no",
-                  remote, command]
-    return system_call(remote_cmd, log)
+    ssh = ["/usr/bin/ssh",
+           "-t",
+           "-o", "ConnectTimeout=1",
+           "-o", "StrictHostKeyChecking=no",
+           host]
+    return system_call(ssh + command, log)
 
 
 def test_remote_trigger(trigger, log):
@@ -260,7 +260,7 @@ def main():
     log.info('Schedule started')
     while True:
         schedule.run_pending()
-        sleep(.5)
+        sleep(.1)
 
 
 if __name__ == "__main__":
