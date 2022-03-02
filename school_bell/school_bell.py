@@ -109,9 +109,10 @@ def test_remote_trigger(trigger, log):
     """
     for remote in list(trigger.keys()):
 
-        success = remote_ring(remote, [trigger[remote], '--help'], log)
+        if remote_ring(remote, [trigger[remote], '--help'], log):
+            log.info(f"remote ring test for {remote} passed")
 
-        if not success:
+        else:
             log.warning(f"remote ring test for {remote} failed!")
             trigger.pop(remote)
 
