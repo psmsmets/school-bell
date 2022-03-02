@@ -8,6 +8,7 @@ import logging
 import os
 import schedule
 import sys
+import tempfile
 from gpiozero import Buzzer
 from subprocess import Popen, PIPE
 from time import sleep
@@ -40,11 +41,11 @@ def is_raspberry_pi():
     return model.startswith("Raspberry Pi")
 
 
-def init_logger(prog, debug):
+def init_logger(prog=None, debug=False):
     """Create the logger object
     """
     # create logger
-    logger = logging.getLogger(prog)
+    logger = logging.getLogger(prog or 'school-bell')
 
     # log to stdout
     streamHandler = logging.StreamHandler(sys.stdout)
@@ -59,11 +60,12 @@ def init_logger(prog, debug):
     return logger
 
 
-def system_call(command: list, log: logging.Logger, **kwargs):
+def system_call(command: list, log: logging.Logger = None, **kwargs):
     """Execute a system call. Returns `True` on success.
     """
     if not isinstance(command, list):
         raise TypeError("command should be a list!")
+    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
 
     log.debug(' '.join(command))
 
@@ -147,6 +149,25 @@ class DemoConfig(argparse.Action):
         sys.exit()
 
 
+class SelfUpdate(argparse.Action):
+    """Argparse action to self-update the school-bell code from git.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+
+        with tempfile.TemporaryDirectory() as tmp:
+
+            log = init_logger(debug=True)
+            git = 'https://github.com/psmsmets/school-bell.git'
+            src = os.path.join(tmp, 'school-bell')
+
+            if system_call(['git', 'clone', git, tmp], log):
+                system_call(['pip', 'install', '--src', src, '.'], log)
+
+            log.info('school-bell updated.')
+
+        sys.exit()
+
+
 def main():
     """Main script function.
     """
@@ -169,6 +190,10 @@ def main():
     parser.add_argument(
         '--demo', action=DemoConfig, nargs=0,
         help='Print the demo JSON configuration and exit'
+    )
+    parser.add_argument(
+        '--update', action=SelfUpdate, nargs=0,
+        help='Update %(prog)s from git.'
     )
     parser.add_argument(
         '--version', action='version', version=version,
