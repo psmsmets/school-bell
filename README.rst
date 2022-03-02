@@ -60,6 +60,14 @@ Configuration (JSON)
 
 The remote trigger requires an ``ssh-key`` to connect to the remote host!
 
+Generate a new ``ssh-key`` named ``school-bell`` in ``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname ``pibell``
+
+.. codeblock:: sh
+
+    ssh-keygen -t rsa -b 4096 -C "school-bell" -N "" -f ${HOME}/.ssh/id_school_bell
+    ssh-copy-id -f -i${HOME}/.ssh/id_school_bell pi@pibell.local
+
+
 
 Systemd service
 ===============
