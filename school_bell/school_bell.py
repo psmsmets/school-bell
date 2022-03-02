@@ -21,10 +21,10 @@ except (ValueError, ModuleNotFoundError):
 # Check platform and set wav player
 if sys.platform in ("linux", "linux2"):
     _play = "/usr/bin/aplay"
-    _play_test = [_play, '-d', '.5']
+    _play_test = [_play, '-d', '1']
 elif sys.platform == "darwin":
     _play = "/usr/bin/afplay"
-    _play_test = [_play, '-t', '.5']
+    _play_test = [_play, '-t', '1']
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
 
@@ -190,15 +190,19 @@ def main():
             log.error(err)
             raise TypeError(err)
 
+    # get root
+    root = args.config['root'] if 'root' in args.config else ''
+
     # verify wav
     log.info("wav =")
     for key, wav in args.config['wav'].items():
         log.info(f"  {key}: {wav}")
-        if not os.path.isfile(wav):
-            err = f"File '{wav}' not found!"
+        root_wav = os.path.join(root, wav)
+        if not os.path.isfile(root_wav):
+            err = f"File '{root_wav}' not found!"
             log.error(err)
             raise FileNotFoundError(err)
-        if not play(wav, log, test=True):
+        if not play(root_wav, log, test=True):
             err = f"could not play {wav}!"
             log.error(err)
             raise RuntimeError(err)
@@ -230,7 +234,7 @@ def main():
         for time, wav_key in times.items():
             log.info(f"  ring every {day} at {time} with {wav_key}")
             try:
-                wav = args.config['wav'][f"{wav_key}"]
+                wav = os.path.join(root, args.config['wav'][f"{wav_key}"])
             except KeyError:
                 err = f"wav key {wav_key} is not related to any sample!"
                 log.error(err)
