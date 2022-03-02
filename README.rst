@@ -4,12 +4,19 @@ School Bell
 
 Python scheduled ringing of the school bell.
 
-Installation
-============
+
+Setup
+=====
+
+See the guide_ how to configure a Raspberry Pi and Python 3.9 virtual environment from scratch.
+
+.. _guide: GUIDE.rst
+
+Install the local Python package using ``pip``.
 
 .. code-block:: bash
 
-    pip install -e
+    pip install .
 
 
 Usage
@@ -114,14 +121,6 @@ Logs are handled via ``syslog``. Show all logs of today:
 .. code-block:: sh
 
     journalctl -u school-bell --since=today
-    
-
-Configure a RPi
-===============
-
-See the guide_ how to configure a Raspberry Pi from scratch.
-
-.. _guide: GUIDE.rst
 
 
 Licensing
