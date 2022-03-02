@@ -61,7 +61,7 @@ def init_logger(prog, debug):
 def system_call(command: list, log: logging.Logger):
     """Execute a system call. Returns `True` on success.
     """
-    if isinstance(command, list):
+    if not isinstance(command, list):
         raise TypeError("command should be a list!")
 
     log.debug(' '.join(command))

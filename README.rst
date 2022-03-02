@@ -49,7 +49,7 @@ Configuration (JSON)
             "Fri": {"08:30": 0, "12:00": 0, "15:00": 0},
         },
         "trigger": {
-            "pibell2": "aplay"
+            "pibell2": "/usr/bin/aplay"
         },
         "wav": {
             "0": "samples/SchoolBell-SoundBible.com-449398625.wav",
