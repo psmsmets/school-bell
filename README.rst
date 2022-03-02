@@ -49,7 +49,7 @@ Configuration (JSON)
             "Fri": {"08:30": 0, "12:00": 0, "15:00": 0},
         },
         "trigger": {
-            "pi@10.10.70.121": "aplay"
+            "pibell2": "aplay"
         },
         "wav": {
             "0": "samples/SchoolBell-SoundBible.com-449398625.wav",
@@ -60,12 +60,23 @@ Configuration (JSON)
 
 The remote trigger requires an ``ssh-key`` to connect to the remote host!
 
-Generate a new ``ssh-key`` named ``school-bell`` in ``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname ``pibell``
+Generate a new ``ssh-key`` named ``school-bell`` in ``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname ``pibell2``
 
 .. code-block:: sh
 
     ssh-keygen -t rsa -b 4096 -C "school-bell" -N "" -f ${HOME}/.ssh/id_school_bell
-    ssh-copy-id -f -i${HOME}/.ssh/id_school_bell pi@pibell.local
+    ssh-copy-id -f -i${HOME}/.ssh/id_school_bell pi@pibell2.local
+
+Add the following configuration for ``pibell2`` to ``~/.ssh/config``:
+
+.. code-block:: sh
+
+    Host pibell2
+        HostName pibell2.local
+        User pi
+        ForwardX11 no
+        PreferredAuthentications publickey
+        IdentityFile ~/.ssh/id_school_bell
 
 
 Systemd service
