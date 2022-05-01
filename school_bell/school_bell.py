@@ -215,8 +215,8 @@ def main():
 
     # parse json config
     log.info(f"config = {args.config}")
-    if os.path.isfile(args.config):
-        with open(args.config) as f:
+    if os.path.isfile(os.path.expandsvars(args.config)):
+        with open(os.path.expandsvars(args.config)) as f:
             args.config = json.load(f)
     else:
         try:
@@ -246,7 +246,7 @@ def main():
     for key, wav in args.config['wav'].items():
         log.info(f"  {key}: {wav}")
         root_wav = os.path.join(root, wav)
-        if not os.path.isfile(root_wav):
+        if not os.path.isfile(os.path.expandsvars(root_wav)):
             err = f"File '{root_wav}' not found!"
             log.error(err)
             raise FileNotFoundError(err)
