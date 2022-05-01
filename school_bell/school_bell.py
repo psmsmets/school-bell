@@ -245,8 +245,8 @@ def main():
     log.info("wav =")
     for key, wav in args.config['wav'].items():
         log.info(f"  {key}: {wav}")
-        root_wav = os.path.join(root, wav)
-        if not os.path.isfile(os.path.expandvars(root_wav)):
+        root_wav = os.path.expandvars(os.path.join(root, wav))
+        if not os.path.isfile(root_wav):
             err = f"File '{root_wav}' not found!"
             log.error(err)
             raise FileNotFoundError(err)
