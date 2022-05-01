@@ -75,7 +75,7 @@ Create and activate the Python venv
 .. code-block:: sh
 
     /usr/bin/python3 -m venv --clear --prompt py3 ~/.local
-    source /home/pi/.local/bin/activate
+    source /home/$USER/.local/bin/activate
 
 
 Upgrade pip and install related packages in venv
@@ -104,5 +104,5 @@ Add aliases and Python venv activation to ``~/.bashrc``
     alias reset-failed='sudo systemctl reset-failed'
 
     # Python 3.9 venv
-    source /home/pi/.local/bin/activate
+    source /home/$USER/.local/bin/activate
     EOF
