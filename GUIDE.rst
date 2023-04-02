@@ -43,7 +43,7 @@ Core configuration
     sudo apt install -y git wget vim build-essential checkinstall
 
     # configure vim
-    cat << EOF >> /home/$USER/.vimrc
+    cat << EOF >> $HOME/.vimrc
     filetype plugin indent off
     syntax on
     set term=builtin_xterm
@@ -75,7 +75,7 @@ Create and activate the Python venv
 .. code-block:: sh
 
     /usr/bin/python3 -m venv --clear --prompt py3 ~/.local
-    source /home/$USER/.local/bin/activate
+    source $HOME/.local/bin/activate
 
 
 Upgrade pip and install related packages in venv
@@ -89,7 +89,7 @@ Add aliases and Python venv activation to ``~/.bashrc``
 
 .. code-block:: sh
 
-    cat << EOF >> /home/$USER/.bashrc
+    cat << EOF >> $HOME/.bashrc
     # aliases
     alias ls='ls -h --color'
     alias l=ls
@@ -104,5 +104,5 @@ Add aliases and Python venv activation to ``~/.bashrc``
     alias reset-failed='sudo systemctl reset-failed'
 
     # Python3 venv
-    source /home/$USER/.local/bin/activate
+    source "$HOME/.local/bin/activate"
     EOF
