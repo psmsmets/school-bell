@@ -103,6 +103,6 @@ Add aliases and Python venv activation to ``~/.bashrc``
     alias reload='sudo systemctl daemon-reload'
     alias reset-failed='sudo systemctl reset-failed'
 
-    # Python 3.9 venv
+    # Python3 venv
     source /home/$USER/.local/bin/activate
     EOF
