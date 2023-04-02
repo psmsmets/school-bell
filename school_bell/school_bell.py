@@ -184,6 +184,12 @@ def main():
               '(default: %(default)s)')
     )
     parser.add_argument(
+        '-t', '--test', metavar='..', type=str, nargs='?',
+        default=False,
+        help=('Play a wav to test by specifying the key from JSON configuration '
+              '(default: %(default)s)')
+    )
+    parser.add_argument(
         '--debug', action='store_true', default=False,
         help='Make the operation a lot more talkative'
     )
@@ -241,7 +247,18 @@ def main():
     root = args.config['root'] if 'root' in args.config else ''
     log.info(f"root = {root}")
 
-    # verify wav
+    # test by playing a single wav
+    if args.test:
+        wav = args.config['wav'][args.test]
+        log.info(f"test = {wav}")
+        root_wav = os.path.expandvars(os.path.join(root, wav))
+        if not play(root_wav, log, test=False):
+            err = f"Could not play {wav}!"
+            log.error(err)
+            raise RuntimeError(err)
+        raise SystemExit("test completed")
+
+    # verify all wav
     log.info("wav =")
     for key, wav in args.config['wav'].items():
         log.info(f"  {key}: {wav}")
