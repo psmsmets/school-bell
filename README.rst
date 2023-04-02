@@ -37,6 +37,7 @@ Type ``school-bell --help`` for the usage.
     optional arguments:
       -h, --help            show this help message and exit
       -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays (default: False)
+      -t [..], --test [..]  Play a wav to test by specifying the key from JSON configuration (default: False)
       --debug               Make the operation a lot more talkative
       --demo                Print the demo JSON configuration and exit
       --version             Print the version and exit
@@ -128,4 +129,4 @@ Licensing
 
 The source code for school-bell is licensed under MIT that can be found under the LICENSE file.
 
-Pieter Smets © 2022. All rights reserved.
+Pieter Smets © 2023. All rights reserved.
