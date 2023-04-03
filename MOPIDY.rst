@@ -17,16 +17,19 @@ Installing extensions:
 
     # Mopidy-Iris
     python3 -m pip install Mopidy-Iris
-    
-    # Mopidy-YouTube
-    sudo apt-get install gstreamer1.0-plugins-bad
-    python3 -m pip install -U yt-dlp
-    python3 -m pip install Mopidy-Youtube
      
     # Mopidy-Spotify
     git clone https://github.com/beaverking1212/mopidy-spotify
     cd mopidy-spotify
     python3 -m pip install .
+    
+    # Mopidy-TuneIn
+    sudo apt install mopidy-tunein
+    
+    # Mopidy-YouTube
+    sudo apt-get install gstreamer1.0-plugins-bad
+    python3 -m pip install -U yt-dlp
+    python3 -m pip install Mopidy-Youtube
     
 Configure alsa:
 ===============
