@@ -94,7 +94,7 @@ Edit `/etc/mopidy/mopidy.conf`
     [youtube]
     # https://github.com/natumbri/mopidy-youtube
     enabled = true
-    youtube_dl_package = "yt-dlp"
+    youtube_dl_package = yt_dlp
     allow_cache = false
     autoplay_enabled = false
     
