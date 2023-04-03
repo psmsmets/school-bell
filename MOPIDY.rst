@@ -17,6 +17,7 @@ Installing extensions:
 
     # Mopidy-Iris
     sudo python3 -m pip install Mopidy-Iris
+    sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.7/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
      
     # Mopidy-Spotify
     git clone https://github.com/beaverking1212/mopidy-spotify
