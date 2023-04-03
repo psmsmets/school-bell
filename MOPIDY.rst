@@ -67,6 +67,11 @@ Edit `/etc/mopidy/mopidy.conf`
     
     [spotify]
     # https://github.com/beaverking1212/mopidy-spotify
+    enabled = true
+    username = alice
+    password = secret
+    client_id = ... client_id value you got from mopidy.com ...
+    client_secret = ... client_secret value you got from mopidy.com ...
 
     [stream]
     enabled = true
