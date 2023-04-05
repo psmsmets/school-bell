@@ -186,8 +186,9 @@ def main():
     parser.add_argument(
         '-p', '--play', metavar='..', type=str, nargs='?',
         default=False,
-        help=('Play a wav to test the audio by specifying the key from '
-              'JSON configuration (default: %(default)s)')
+        help=('Play a WAV audio file by specifying the key from '
+              'the JSON configuration and exit '
+              '(default: %(default)s)')
     )
     parser.add_argument(
         '--debug', action='store_true', default=False,
@@ -199,7 +200,8 @@ def main():
     )
     parser.add_argument(
         '--test', action='store_true', default=False,
-        help=('Play one second samples of each wav file at startup '
+        help=('Play one second samples of each WAV audio file from '
+              'the JSON configuration at startup '
               '(default: %(default)s)')
     )
     parser.add_argument(
@@ -236,6 +238,7 @@ def main():
             err = "JSON configuration should be a string or file!"
             log.error(err)
             raise RuntimeError(err)
+    log.info(f"play = {_play}")
 
     # check if all arguments are present
     for key in ('schedule', 'trigger', 'wav'):
@@ -264,21 +267,22 @@ def main():
         raise SystemExit("test completed")
 
     # verify all wav
-    if args.test:
-        log.info("wav =")
-        for key, wav in args.config['wav'].items():
-            log.info(f"  {key}: {wav}")
-            root_wav = os.path.expandvars(os.path.join(root, wav))
-            if not os.path.isfile(root_wav):
-                err = f"File '{root_wav}' not found!"
-                log.error(err)
-                raise FileNotFoundError(err)
+    log.info("wav =")
+    for key, wav in args.config['wav'].items():
+        log.info(f"  {key}: {wav}")
+        root_wav = os.path.expandvars(os.path.join(root, wav))
+        if not os.path.isfile(root_wav):
+            err = f"File '{root_wav}' not found!"
+            log.error(err)
+            raise FileNotFoundError(err)
+        if args.test:
             if not play(root_wav, log, test=True):
                 err = f"Could not play {root_wav}!"
                 log.error(err)
                 raise RuntimeError(err)
-    else:
-        log.warning("wav files not tested at startup")
+    if not args.test:
+        log.warning("wav audio files not not played to test "
+                    "(run with option --test instead)")
 
     # verify remote triggers
     log.info("trigger =")

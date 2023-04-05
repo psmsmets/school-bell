@@ -10,7 +10,7 @@ Setup
 
 See the guide_ how to configure a Raspberry Pi and Python 3.9 virtual environment from scratch.
 
-.. _guide: GUIDE.rst
+.. _guide: docs/GUIDE.rst
 
 Install the local Python package using ``pip``.
 
