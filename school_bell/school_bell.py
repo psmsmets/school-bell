@@ -184,10 +184,10 @@ def main():
               '(default: %(default)s)')
     )
     parser.add_argument(
-        '-t', '--test', metavar='..', type=str, nargs='?',
+        '-p', '--play', metavar='..', type=str, nargs='?',
         default=False,
-        help=('Play a wav to test by specifying the key from JSON configuration '
-              '(default: %(default)s)')
+        help=('Play a wav to test the audio by specifying the key from '
+              'JSON configuration (default: %(default)s)')
     )
     parser.add_argument(
         '--debug', action='store_true', default=False,
@@ -198,8 +198,12 @@ def main():
         help='Print the demo JSON configuration and exit'
     )
     parser.add_argument(
+        '--test', action='store_true', default=False,
+        help='Play one second samples of each wav file at startup'
+    )
+    parser.add_argument(
         '--update', action=SelfUpdate, nargs=0,
-        help='Update %(prog)s from git.'
+        help='Update %(prog)s from git'
     )
     parser.add_argument(
         '--version', action='version', version=version,
@@ -248,7 +252,7 @@ def main():
     log.info(f"root = {root}")
 
     # test by playing a single wav
-    if args.test:
+    if args.play:
         wav = args.config['wav'][args.test]
         log.info(f"test = {wav}")
         root_wav = os.path.expandvars(os.path.join(root, wav))
@@ -259,18 +263,21 @@ def main():
         raise SystemExit("test completed")
 
     # verify all wav
-    log.info("wav =")
-    for key, wav in args.config['wav'].items():
-        log.info(f"  {key}: {wav}")
-        root_wav = os.path.expandvars(os.path.join(root, wav))
-        if not os.path.isfile(root_wav):
-            err = f"File '{root_wav}' not found!"
-            log.error(err)
-            raise FileNotFoundError(err)
-        if not play(root_wav, log, test=True):
-            err = f"Could not play {root_wav}!"
-            log.error(err)
-            raise RuntimeError(err)
+    if args.test:
+        log.info("wav =")
+        for key, wav in args.config['wav'].items():
+            log.info(f"  {key}: {wav}")
+            root_wav = os.path.expandvars(os.path.join(root, wav))
+            if not os.path.isfile(root_wav):
+                err = f"File '{root_wav}' not found!"
+                log.error(err)
+                raise FileNotFoundError(err)
+            if not play(root_wav, log, test=True):
+                err = f"Could not play {root_wav}!"
+                log.error(err)
+                raise RuntimeError(err)
+    else:
+        log.warning("wav files not tested at startup")
 
     # verify remote triggers
     log.info("trigger =")

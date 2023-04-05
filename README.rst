@@ -37,9 +37,11 @@ Type ``school-bell --help`` for the usage.
     optional arguments:
       -h, --help            show this help message and exit
       -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays (default: False)
-      -t [..], --test [..]  Play a wav to test by specifying the key from JSON configuration (default: False)
+      -p [..], --play [..]  Play a wav to test the audio by specifying the key from JSON configuration (default: False)
       --debug               Make the operation a lot more talkative
       --demo                Print the demo JSON configuration and exit
+      --test                Play one second samples of each wav file at startup
+      --update              Update school-bell from git
       --version             Print the version and exit
 
 
