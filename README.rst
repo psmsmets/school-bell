@@ -40,7 +40,7 @@ Type ``school-bell --help`` for the usage.
       -p [..], --play [..]  Play a wav to test the audio by specifying the key from JSON configuration (default: False)
       --debug               Make the operation a lot more talkative
       --demo                Print the demo JSON configuration and exit
-      --test                Play one second samples of each wav file at startup
+      --test                Play one second samples of each wav file at startup (default: False)
       --update              Update school-bell from git
       --version             Print the version and exit
 
