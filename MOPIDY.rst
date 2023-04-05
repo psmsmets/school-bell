@@ -79,6 +79,8 @@ Edit `/etc/mopidy/mopidy.conf`
     [http]
     # Make sure the web interface can be accessed by the local network
     hostname = 0.0.0.0
+    port = 6680
+    # default_app = iris
 
     [audio]
     # mixer_volume = 100
