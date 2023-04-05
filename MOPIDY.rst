@@ -29,17 +29,41 @@ Installing extensions:
     
     # Mopidy-YouTube
     sudo apt-get install gstreamer1.0-plugins-bad
+    python3 -m pip install --upgrade youtube-dl
     sudo python3 -m pip install -U yt-dlp
     sudo python3 -m pip install Mopidy-YouTube
     
 Configure alsa:
 ===============
 
-Edit `/etc/.conf`
+Edit `/etc/asound.conf`
 
 .. code-block:: sh
 
-    ...
+    pcm.output {
+      type hw
+      card 0
+    }
+    ctl.!default {
+      type hw
+      card 0
+    }
+    pcm.klas {
+      type plug
+      slave {
+        pcm "output"
+        channels 2
+      }
+      ttable.0.0 1
+    }
+    pcm.speelplaats {
+      type plug
+      slave {
+        pcm "output"
+        channels 2
+      }
+      ttable.0.1 1
+    }
 
 Configure mopidy:
 =================
@@ -48,24 +72,24 @@ Edit `/etc/mopidy/mopidy.conf`
 
 .. code-block:: sh
 
-    [audio]
-    # mixer_volume = 50
-    output = alsasink device=hw:0,0
-    
-    [core]
-    restore_state = true
+    [mpd]
+    enabled = true
+    hostname = ::
 
     [http]
-    enabled = true
-    hostname = mopidy.local
-    port = 6680
-    default_app = iris
+    # Make sure the web interface can be accessed by the local network
+    hostname = 0.0.0.0
 
-    [iris]
-    country = be
-    locale = nl_BE
-    snapcast_enabled = false
-    
+    [audio]
+    # mixer_volume = 100
+    output = alsasink device=speelplaats
+
+    [file]
+    enabled = false
+
+    [m3u]
+    enabled = false
+
     [spotify]
     # https://github.com/beaverking1212/mopidy-spotify
     enabled = true
@@ -74,29 +98,16 @@ Edit `/etc/mopidy/mopidy.conf`
     client_id = ... client_id value you got from mopidy.com ...
     client_secret = ... client_secret value you got from mopidy.com ...
 
-    [stream]
-    enabled = true
-    protocols =
-        http
-        https
-        mms
-        rtmp
-        rtmps
-        rtsp
-    timeout = 5000
-    metadata_blacklist =
-    
-    [tunein]
-    enabled = true
-    timeout = 5000
-    filter = station
-
     [youtube]
-    # https://github.com/natumbri/mopidy-youtube
+    # https://github.com/natumbri/mopidy-youtub
     enabled = true
     youtube_dl_package = yt_dlp
-    allow_cache = false
     autoplay_enabled = false
+
+    [iris]
+    country = be
+    locale = nl_BE
+    snapcast_enabled = false
     
 Restart mopidy service after update
 
