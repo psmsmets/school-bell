@@ -199,7 +199,8 @@ def main():
     )
     parser.add_argument(
         '--test', action='store_true', default=False,
-        help='Play one second samples of each wav file at startup'
+        help=('Play one second samples of each wav file at startup '
+              '(default: %(default)s)')
     )
     parser.add_argument(
         '--update', action=SelfUpdate, nargs=0,
