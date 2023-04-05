@@ -5,7 +5,7 @@ Configure a Raspberry Pi from scratch
 Prepare
 =======
 
-Use `Rapberry Pi Imager`__ to install *Raspberry Pi OS Lite (32-bit)* on an microSD card (16GB class 10 is fine).
+Use `Rapberry Pi Imager`__ to install *Raspberry Pi OS Lite (64-bit)* on an microSD card (32GB shall be fine, make sure it is class 10).
 
 .. __: https://www.raspberrypi.org/blog/raspberry-pi-imager-imaging-utility/
 

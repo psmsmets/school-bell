@@ -1,0 +1,118 @@
+******************************
+Setup Mopidy on a Raspberry Pi
+******************************
+
+Install Mopidy for Debian/Ubuntu:
+=================================
+
+Checkout `Install from apt.mopidy.com`__ to install *Mopidy*.
+
+.. __: hhttps://docs.mopidy.com/en/latest/installation/debian/#install-from-apt-mopidy-com
+
+
+Installing extensions:
+======================
+
+.. code-block:: sh
+
+    # Mopidy-Iris
+    sudo python3 -m pip install Mopidy-Iris
+    sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.7/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
+     
+    # Mopidy-Spotify
+    git clone https://github.com/beaverking1212/mopidy-spotify
+    cd mopidy-spotify
+    sudo python3 -m pip install .
+    
+    # Mopidy-TuneIn
+    sudo apt install mopidy-tunein
+    
+    # Mopidy-YouTube
+    sudo apt-get install gstreamer1.0-plugins-bad
+    python3 -m pip install --upgrade youtube-dl
+    sudo python3 -m pip install -U yt-dlp
+    sudo python3 -m pip install Mopidy-YouTube
+    
+Configure alsa:
+===============
+
+Edit `/etc/asound.conf`
+
+.. code-block:: sh
+
+    pcm.output {
+      type hw
+      card 0
+    }
+    ctl.!default {
+      type hw
+      card 0
+    }
+    pcm.klas {
+      type plug
+      slave {
+        pcm "output"
+        channels 2
+      }
+      ttable.0.0 1
+    }
+    pcm.speelplaats {
+      type plug
+      slave {
+        pcm "output"
+        channels 2
+      }
+      ttable.0.1 1
+    }
+
+Configure mopidy:
+=================
+
+Edit `/etc/mopidy/mopidy.conf`
+
+.. code-block:: sh
+
+    [mpd]
+    enabled = true
+    hostname = ::
+
+    [http]
+    # Make sure the web interface can be accessed by the local network
+    hostname = 0.0.0.0
+    port = 6680
+    # default_app = iris
+
+    [audio]
+    # mixer_volume = 100
+    output = alsasink device=speelplaats
+
+    [file]
+    enabled = false
+
+    [m3u]
+    enabled = false
+
+    [spotify]
+    # https://github.com/beaverking1212/mopidy-spotify
+    enabled = true
+    username = alice
+    password = secret
+    client_id = ... client_id value you got from mopidy.com ...
+    client_secret = ... client_secret value you got from mopidy.com ...
+
+    [youtube]
+    # https://github.com/natumbri/mopidy-youtub
+    enabled = true
+    youtube_dl_package = yt_dlp
+    autoplay_enabled = false
+
+    [iris]
+    country = be
+    locale = nl_BE
+    snapcast_enabled = false
+    
+Restart mopidy service after update
+
+.. code-block:: sh
+
+    sudo systemctl restart mopidy
