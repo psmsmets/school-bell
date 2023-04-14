@@ -24,7 +24,7 @@ Installing extensions:
      
     # Mopidy-Spotify
     # compile spotify with `-j1`
-    sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotif
+    sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotify
     
     # Mopidy-TuneIn
     sudo apt install mopidy-tunein
