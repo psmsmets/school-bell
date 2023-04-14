@@ -74,7 +74,7 @@ Create and activate the Python venv
 
 .. code-block:: sh
 
-    /usr/bin/python3 -m venv --clear --prompt py3 ~/.local
+    /usr/bin/python3 -m venv --clear --prompt py3 $HOME/.local
     source $HOME/.local/bin/activate
 
 

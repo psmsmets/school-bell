@@ -15,22 +15,23 @@ Installing extensions:
 
 .. code-block:: sh
 
+    # Mopidy-Autoplay
+    sudo python3 -m pip install Mopidy-Autoplay
+
     # Mopidy-Iris
     sudo python3 -m pip install Mopidy-Iris
-    sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.7/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
+    sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.9/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
      
     # Mopidy-Spotify
-    git clone https://github.com/beaverking1212/mopidy-spotify
-    cd mopidy-spotify
-    sudo python3 -m pip install .
+    # compile spotify with `-j1`
+    sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotif
     
     # Mopidy-TuneIn
     sudo apt install mopidy-tunein
     
     # Mopidy-YouTube
     sudo apt-get install gstreamer1.0-plugins-bad
-    python3 -m pip install --upgrade youtube-dl
-    sudo python3 -m pip install -U yt-dlp
+    sudo python3 -m pip install --upgrade youtube-dl yt-dlp
     sudo python3 -m pip install Mopidy-YouTube
 
 
