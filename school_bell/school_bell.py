@@ -87,10 +87,10 @@ def play(wav: str, log: logging.Logger, test: bool = False):
     return system_call(_play_test + [wav] if test else [_play, wav], log)
 
 
-def ring(wav, buzzer, trigger, log):
+def ring(key, wav, buzzer, trigger, log):
     """Ring the school bell
     """
-    log.info("ring!")
+    log.info(f"ring {key}={os.path.basename(wav)}!")
 
     threads = []
     for remote, command in trigger.items():
@@ -153,18 +153,9 @@ class SelfUpdate(argparse.Action):
     """Argparse action to self-update the school-bell code from git.
     """
     def __call__(self, parser, namespace, values, option_string=None):
-
-        with tempfile.TemporaryDirectory() as tmp:
-
-            log = init_logger(debug=True)
-            git = 'https://github.com/psmsmets/school-bell.git'
-            src = os.path.join(tmp, 'school-bell')
-
-            if system_call(['git', 'clone', git, tmp], log):
-                system_call(['pip', 'install', '--src', src, '.'], log)
-
-            log.info('school-bell updated.')
-
+        log = init_logger(debug=True)
+        system_call(['pip', 'install', 'git+https://github.com/psmsmets/school-bell'], log)
+        log.info('school-bell updated.')
         sys.exit()
 
 
@@ -300,8 +291,8 @@ def main():
             log.warning("Host is not a Raspberry Pi: buzzer disabled!")
 
     # ring wrapper
-    def _ring(wav):
-        ring(wav, buzzer, trigger, log)
+    def _ring(key, wav):
+        ring(key, wav, buzzer, trigger, log)
 
     # create schedule
     log.info("schedule =")
@@ -316,7 +307,7 @@ def main():
                 err = f"wav key {wav_key} is not related to any sample!"
                 log.error(err)
                 raise KeyError(err)
-            eval(f"schedule.every().{day_name}.at(\"{time}\").do(_ring, wav)")
+            eval(f"schedule.every().{day_name}.at(\"{time}\").do(_ring, wav_key, wav)")
 
     # run schedule
     log.info('Schedule started')

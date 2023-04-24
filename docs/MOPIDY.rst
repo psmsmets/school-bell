@@ -23,7 +23,12 @@ Installing extensions:
     sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.9/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
      
     # Mopidy-Spotify
-    # compile spotify with `-j1`
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev pkg-config git
+    git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs
+    cd gst-plugins-rs
+    cargo build --package gst-plugin-spotify --release -j1
+    sudo install -m 644 target/release/libgstspotify.so $(pkg-config --variable=pluginsdir gstreamer-1.0)/
     sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotify
     
     # Mopidy-TuneIn
