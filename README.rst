@@ -12,11 +12,11 @@ See the guide_ how to configure a Raspberry Pi and Python 3.9 virtual environmen
 
 .. _guide: docs/GUIDE.rst
 
-Install the local Python package using ``pip``.
+Install the Python package using ``pip``.
 
 .. code-block:: bash
 
-    pip install .
+    pip install git+https://github.com/psmsmets/school-bell
 
 
 Usage
