@@ -41,7 +41,8 @@ Type ``school-bell --help`` for the usage.
       -p [..], --play [..]  Play a WAV audio file by specifying the key from the
                             JSON configuration and exit (default: False)
       --debug               Make the operation a lot more talkative
-      --demo                Print the demo JSON configuration and exit
+      --demo-config         Print the demo JSON configuration and exit
+      --demo-service        Print the demo systemctl service for the current user and exit
       --test                Play one second samples of each WAV audio file from
                             the JSON configuration at startup (default: False)
       --update              Update school-bell from git
@@ -95,11 +96,11 @@ Add the following configuration for ``pibell2`` to ``~/.ssh/config``:
 Systemd service
 ===============
 
-Create a systemd service of the school-bell. An example service is given in ``school-bell.service`` for user ``pi`` with the configuration in ``~/school-bell.json``.
+Create a systemd service of the school-bell. An example service is given by the command ``school-bell --demo-service`` for the current user with the configuration in ``${HOME}/school-bell.json``. The service can be modified if needed.
 
 .. code-block:: sh
 
-    sudo cp school-bell.service /etc/systemd/system
+    school-bell --demo-service | sudo tee /etc/systemd/system/school-bell.service
     sudo systemctl daemon-reload
     sudo systemctl enable school-bell    
     sudo systemctl start school-bell

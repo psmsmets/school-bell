@@ -137,12 +137,31 @@ def test_remote_trigger(trigger, log):
     return trigger
 
 
+class DemoService(argparse.Action):
+    """Argparse action to print a demo systemctl service
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        demo = os.path.join(
+            sys.exec_prefix, 'share', 'school-bell', 'demo.service'
+        )
+        with open(demo, "r") as demo_service:
+            service = demo_service.read()
+            print(service.format(
+                BIN=os.path.join(sys.exec_prefix, 'bin', 'school-bell'),
+                CONFIG=os.path.expandvars(os.path.join('$HOME', 'school-bell.json')),
+                HOME=os.path.expandvars(os.path.join('$HOME')),
+                GROUP=os.getlogin(),
+                USER=os.getlogin(),
+            ))
+        sys.exit()
+
+
 class DemoConfig(argparse.Action):
     """Argparse action to print a demo JSON configuration
     """
     def __call__(self, parser, namespace, values, option_string=None):
         demo = os.path.join(
-            sys.exec_prefix, 'share', 'school-bell', 'config.json'
+            sys.exec_prefix, 'share', 'school-bell', 'demo.json'
         )
         with open(demo, "r") as demo_config:
             print(json.dumps(json.load(demo_config), indent=4))
@@ -186,8 +205,12 @@ def main():
         help='Make the operation a lot more talkative'
     )
     parser.add_argument(
-        '--demo', action=DemoConfig, nargs=0,
+        '--demo-config', action=DemoConfig, nargs=0,
         help='Print the demo JSON configuration and exit'
+    )
+    parser.add_argument(
+        '--demo-service', action=DemoService, nargs=0,
+        help='Print the demo systemctl service for the current user and exit'
     )
     parser.add_argument(
         '--test', action='store_true', default=False,

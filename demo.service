@@ -4,13 +4,13 @@ After=multi-user.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/
-Environment="VIRTUAL_ENV=/home/pi/.local"
+User={USER}
+Group={GROUP}
+WorkingDirectory={HOME}
+Environment="VIRTUAL_ENV={HOME}/.local"
 Environment="PATH=$VIRTUAL_ENV/bin:$PATH"
 ExecStart=
-ExecStart=/home/pi/.local/bin/school-bell /home/pi/school-bell.json --debug
+ExecStart={BIN}/school-bell {CONFIG} --debug
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=school-bell
