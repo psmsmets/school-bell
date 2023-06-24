@@ -23,12 +23,8 @@ Installing extensions:
     sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.9/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
      
     # Mopidy-Spotify
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev pkg-config git
-    git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs
-    cd gst-plugins-rs
-    cargo build --package gst-plugin-spotify --release -j1
-    sudo install -m 644 target/release/libgstspotify.so $(pkg-config --variable=pluginsdir gstreamer-1.0)/
+    curl --proto '=https' --tlsv1.2 --output /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstspotify.so https://www.pietersmets.be/share/libgstspotify.so
+    gst-inspect-1.0 spotify
     sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotify
     
     # Mopidy-TuneIn
@@ -38,6 +34,19 @@ Installing extensions:
     sudo apt-get install gstreamer1.0-plugins-bad
     sudo python3 -m pip install --upgrade youtube-dl yt-dlp
     sudo python3 -m pip install Mopidy-YouTube
+
+
+Compile gst-plugins-spotify from source:
+
+.. code-block::sh
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev pkg-config git
+    git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs
+    cd gst-plugins-rs
+    cargo build --package gst-plugin-spotify --release -j1
+    sudo install -m 644 target/release/libgstspotify.so $(pkg-config --variable=pluginsdir gstreamer-1.0)/
+
 
 
 Configure mopidy:
