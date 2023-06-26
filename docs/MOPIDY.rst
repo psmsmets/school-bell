@@ -33,6 +33,7 @@ Installing extensions:
 .. code-block:: sh
      
     # Mopidy-Spotify
+    sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gcc pkg-config git
     sudo curl --proto '=https' --tlsv1.2 --output /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstspotify.so https://www.pietersmets.be/share/libgstspotify.so
     gst-inspect-1.0 spotify
     sudo python3 -m pip install git+https://github.com/mopidy/mopidy-spotify
