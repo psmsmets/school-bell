@@ -10,7 +10,7 @@ WorkingDirectory={HOME}
 Environment="VIRTUAL_ENV={HOME}/.local"
 Environment="PATH=$VIRTUAL_ENV/bin:$PATH"
 ExecStart=
-ExecStart={BIN}/school-bell {CONFIG} --debug
+ExecStart={BIN} {CONFIG} --debug
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=school-bell
