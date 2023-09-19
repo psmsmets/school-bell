@@ -5,11 +5,15 @@ import argparse
 import calendar
 import json
 import logging
+import pkgutil
 import os
+import requests
 import schedule
 import sys
 import tempfile
+from datetime import date
 from gpiozero import Buzzer
+from requests.exceptions import ConnectTimeout
 from subprocess import Popen, PIPE
 from time import sleep
 from threading import Thread
@@ -19,6 +23,14 @@ try:
     from .version import version
 except (ValueError, ModuleNotFoundError):
     version = "VERSION-NOT-FOUND"
+
+# Set path of demo files
+share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
+if not os.path.exists(share):
+    share = os.path.join(
+        os.path.dirname(pkgutil.get_loader("school_bell").get_filename()), 
+        '..'
+    )
 
 # Check platform and set wav player
 if sys.platform in ("linux", "linux2"):
@@ -60,6 +72,62 @@ def init_logger(prog=None, debug=False):
     return logger
 
 
+def parse_openholidays(code: str, validFrom=None, validTo=None):
+    """Returns a list with school and public holidays of the current year.
+
+       Checkout https://openholidaysapi.org/swagger/index.html for more
+       information.
+    """
+    countryIsoCode, languageIsoCode = code.split('-')
+    year = date.today().year
+
+    base_url = "https://openholidaysapi.org/{type}Holidays"
+
+    params = dict(
+        countryIsoCode=countryIsoCode.upper(),
+        languageIsoCode=languageIsoCode.upper(),
+        validFrom=validFrom or f"{year}-01-01",
+        validTo=validTo or f"{year}-12-31",
+        subdivisionCode=f"{countryIsoCode}-{languageIsoCode}".upper()
+    )
+
+    try:
+
+        public = json.loads(
+            requests.get(
+                base_url.format(type="Public"), params, timeout=1
+            ).text
+        )
+
+        school = json.loads(
+            requests.get(
+                base_url.format(type="School"), params, timeout=1
+            ).text
+        )
+
+        holidays = public + school
+
+    except ConnectTimeout:
+
+        holidays = []
+
+    return holidays
+
+
+def is_holiday(code: str):
+    """Returns `True` if the current day is either a public or school holiday.
+    """
+
+    if not code:
+        return False
+
+    today = f"{date.today()}"
+
+    holiday = parse_openholidays(code, validFrom=today, validTo=today)
+
+    return True if holiday else False
+
+
 def system_call(command: list, log: logging.Logger = None, **kwargs):
     """Execute a system call. Returns `True` on success.
     """
@@ -87,9 +155,15 @@ def play(wav: str, log: logging.Logger, test: bool = False):
     return system_call(_play_test + [wav] if test else [_play, wav], log)
 
 
-def ring(key, wav, buzzer, trigger, log):
+def ring(key, wav, buzzer, trigger, holidays, log):
     """Ring the school bell
     """
+
+    # check if current day is not a public/school holiday!
+    if is_holiday(holidays):
+        log.info(f"today is a holiday, no need to ring!")
+        return
+
     log.info(f"ring {key}={os.path.basename(wav)}!")
 
     threads = []
@@ -141,9 +215,7 @@ class DemoService(argparse.Action):
     """Argparse action to print a demo systemctl service
     """
     def __call__(self, parser, namespace, values, option_string=None):
-        demo = os.path.join(
-            sys.exec_prefix, 'share', 'school-bell', 'demo.service'
-        )
+        demo = os.path.join(share, 'demo.service')
         with open(demo, "r") as demo_service:
             service = demo_service.read()
             print(service.format(
@@ -160,9 +232,7 @@ class DemoConfig(argparse.Action):
     """Argparse action to print a demo JSON configuration
     """
     def __call__(self, parser, namespace, values, option_string=None):
-        demo = os.path.join(
-            sys.exec_prefix, 'share', 'school-bell', 'demo.json'
-        )
+        demo = os.path.join(share, 'demo.json')
         with open(demo, "r") as demo_config:
             print(json.dumps(json.load(demo_config), indent=4))
         sys.exit()
@@ -265,9 +335,13 @@ def main():
             log.error(err)
             raise TypeError(err)
 
-    # get root
-    root = args.config['root'] if 'root' in args.config else ''
+    # get expanded root
+    root = os.path.expandvars(args.config['root'] if 'root' in args.config else '')
     log.info(f"root = {root}")
+
+    # get openholidays subdivision code
+    holidays = args.config['holidays'] if 'holidays' in args.config else False
+    log.info(f"openholidays api subdivision code = {holidays}")
 
     # test by playing a single wav
     if args.play:
@@ -315,7 +389,7 @@ def main():
 
     # ring wrapper
     def _ring(key, wav):
-        ring(key, wav, buzzer, trigger, log)
+        ring(key, wav, buzzer, trigger, holidays, log)
 
     # create schedule
     log.info("schedule =")
