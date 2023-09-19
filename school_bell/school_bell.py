@@ -13,6 +13,7 @@ import sys
 import tempfile
 from datetime import date
 from gpiozero import Buzzer
+from requests.exceptions import ConnectTimeout
 from subprocess import Popen, PIPE
 from time import sleep
 from threading import Thread
@@ -90,15 +91,27 @@ def parse_openholidays(code: str, validFrom=None, validTo=None):
         subdivisionCode=f"{countryIsoCode}-{languageIsoCode}".upper()
     )
 
-    public = json.loads(
-        requests.get(base_url.format(type="Public"), params).text
-    )
+    try:
 
-    school = json.loads(
-        requests.get(base_url.format(type="School"), params).text
-    )
+        public = json.loads(
+            requests.get(
+                base_url.format(type="Public"), params, timeout=1
+            ).text
+        )
 
-    return public + school
+        school = json.loads(
+            requests.get(
+                base_url.format(type="School"), params, timeout=1
+            ).text
+        )
+
+        holidays = public + school
+
+    except ConnectTimeout:
+
+        holidays = []
+
+    return holidays
 
 
 def is_holiday(code: str):
