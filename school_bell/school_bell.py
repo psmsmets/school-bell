@@ -11,6 +11,7 @@ import requests
 import schedule
 import sys
 import tempfile
+from datetime import date
 from gpiozero import Buzzer
 from subprocess import Popen, PIPE
 from time import sleep
@@ -22,7 +23,7 @@ try:
 except (ValueError, ModuleNotFoundError):
     version = "VERSION-NOT-FOUND"
 
-# Demo files
+# Set path of demo files
 share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
 if not os.path.exists(share):
     share = os.path.join(
@@ -70,6 +71,50 @@ def init_logger(prog=None, debug=False):
     return logger
 
 
+def parse_openholidays(code: str, validFrom=None, validTo=None):
+    """Returns a list with school and public holidays of the current year.
+
+       Checkout https://openholidaysapi.org/swagger/index.html for more
+       information.
+    """
+    countryIsoCode, languageIsoCode = code.split('-')
+    year = date.today().year
+
+    base_url = "https://openholidaysapi.org/{type}Holidays"
+
+    params = dict(
+        countryIsoCode=countryIsoCode.upper(),
+        languageIsoCode=languageIsoCode.upper(),
+        validFrom=validFrom or f"{year}-01-01",
+        validTo=validTo or f"{year}-12-31",
+        subdivisionCode=f"{countryIsoCode}-{languageIsoCode}".upper()
+    )
+
+    public = json.loads(
+        requests.get(base_url.format(type="Public"), params).text
+    )
+
+    school = json.loads(
+        requests.get(base_url.format(type="School"), params).text
+    )
+
+    return public + school
+
+
+def is_holiday(code: str):
+    """Returns `True` if the current day is either a public or school holiday.
+    """
+
+    if not code:
+        return False
+
+    today = f"{date.today()}"
+
+    holiday = parse_openholidays(code, validFrom=today, validTo=today)
+
+    return True if holiday else False
+
+
 def system_call(command: list, log: logging.Logger = None, **kwargs):
     """Execute a system call. Returns `True` on success.
     """
@@ -97,11 +142,14 @@ def play(wav: str, log: logging.Logger, test: bool = False):
     return system_call(_play_test + [wav] if test else [_play, wav], log)
 
 
-def ring(key, wav, buzzer, trigger, log):
+def ring(key, wav, buzzer, trigger, holidays, log):
     """Ring the school bell
     """
 
     # check if current day is not a public/school holiday!
+    if is_holiday(holidays):
+        log.info(f"today is a holiday, no need to ring!")
+        return
 
     log.info(f"ring {key}={os.path.basename(wav)}!")
 
@@ -279,7 +327,7 @@ def main():
     log.info(f"root = {root}")
 
     # get openholidays subdivision code
-    holidays = args.config['holidays'] if 'holidays' in args.config else ''
+    holidays = args.config['holidays'] if 'holidays' in args.config else False
     log.info(f"openholidays api subdivision code = {holidays}")
 
     # test by playing a single wav
@@ -328,7 +376,7 @@ def main():
 
     # ring wrapper
     def _ring(key, wav):
-        ring(key, wav, buzzer, trigger, log)
+        ring(key, wav, buzzer, trigger, holidays, log)
 
     # create schedule
     log.info("schedule =")
