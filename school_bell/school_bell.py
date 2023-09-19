@@ -5,6 +5,7 @@ import argparse
 import calendar
 import json
 import logging
+import pkgutil
 import os
 import requests
 import schedule
@@ -20,6 +21,14 @@ try:
     from .version import version
 except (ValueError, ModuleNotFoundError):
     version = "VERSION-NOT-FOUND"
+
+# Demo files
+share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
+if not os.path.exists(share):
+    share = os.path.join(
+        os.path.dirname(pkgutil.get_loader("school_bell").get_filename()), 
+        '..'
+    )
 
 # Check platform and set wav player
 if sys.platform in ("linux", "linux2"):
@@ -145,9 +154,7 @@ class DemoService(argparse.Action):
     """Argparse action to print a demo systemctl service
     """
     def __call__(self, parser, namespace, values, option_string=None):
-        demo = os.path.join(
-            sys.exec_prefix, 'share', 'school-bell', 'demo.service'
-        )
+        demo = os.path.join(share, 'demo.service')
         with open(demo, "r") as demo_service:
             service = demo_service.read()
             print(service.format(
@@ -164,9 +171,7 @@ class DemoConfig(argparse.Action):
     """Argparse action to print a demo JSON configuration
     """
     def __call__(self, parser, namespace, values, option_string=None):
-        demo = os.path.join(
-            sys.exec_prefix, 'share', 'school-bell', 'demo.json'
-        )
+        demo = os.path.join(share, 'demo.json')
         with open(demo, "r") as demo_config:
             print(json.dumps(json.load(demo_config), indent=4))
         sys.exit()
