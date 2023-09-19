@@ -6,6 +6,7 @@ import calendar
 import json
 import logging
 import os
+import requests
 import schedule
 import sys
 import tempfile
@@ -90,6 +91,9 @@ def play(wav: str, log: logging.Logger, test: bool = False):
 def ring(key, wav, buzzer, trigger, log):
     """Ring the school bell
     """
+
+    # check if current day is not a public/school holiday!
+
     log.info(f"ring {key}={os.path.basename(wav)}!")
 
     threads = []
@@ -265,9 +269,13 @@ def main():
             log.error(err)
             raise TypeError(err)
 
-    # get root
-    root = args.config['root'] if 'root' in args.config else ''
+    # get expanded root
+    root = os.path.expandvars(args.config['root'] if 'root' in args.config else '')
     log.info(f"root = {root}")
+
+    # get openholidays subdivision code
+    holidays = args.config['holidays'] if 'holidays' in args.config else ''
+    log.info(f"openholidays api subdivision code = {holidays}")
 
     # test by playing a single wav
     if args.play:
