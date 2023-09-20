@@ -302,7 +302,10 @@ def main():
                 err = f"wav key {wav_key} is not related to any sample!"
                 log.error(err)
                 raise KeyError(err)
-            eval(f"schedule.every().{day_name}.at(\"{time}\").do(_ring, wav_key, wav)")
+            eval(
+                "schedule.every().{}.at(\"{}\").do(_ring, wav_key, wav)"
+                .format(day_name, time)
+            )
 
     # run schedule
     log.info('Schedule started')
