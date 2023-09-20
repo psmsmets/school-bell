@@ -7,14 +7,9 @@ import json
 import logging
 import pkgutil
 import os
-import requests
 import schedule
 import sys
-import tempfile
-from datetime import date
 from gpiozero import Buzzer
-from requests.exceptions import ConnectTimeout
-from subprocess import Popen, PIPE
 from time import sleep
 from threading import Thread
 
@@ -23,12 +18,13 @@ try:
     from .version import version
 except (ValueError, ModuleNotFoundError):
     version = "VERSION-NOT-FOUND"
+from .util import init_logger, is_raspberry_pi, system_call, today_is_holiday
 
 # Set path of demo files
 share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
 if not os.path.exists(share):
     share = os.path.join(
-        os.path.dirname(pkgutil.get_loader("school_bell").get_filename()), 
+        os.path.dirname(pkgutil.get_loader("school_bell").get_filename()),
         '..'
     )
 
@@ -43,112 +39,6 @@ elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
 
 
-def is_raspberry_pi():
-    """Checks if the device is a Rasperry Pi
-    """
-    if not os.path.exists("/proc/device-tree/model"):
-        return False
-    with open("/proc/device-tree/model") as f:
-        model = f.read()
-    return model.startswith("Raspberry Pi")
-
-
-def init_logger(prog=None, debug=False):
-    """Create the logger object
-    """
-    # create logger
-    logger = logging.getLogger(prog or 'school-bell')
-
-    # log to stdout
-    streamHandler = logging.StreamHandler(sys.stdout)
-    streamHandler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
-    logger.addHandler(streamHandler)
-
-    # set logger level
-    logger.setLevel(logging.DEBUG if debug else logging.INFO)
-
-    return logger
-
-
-def parse_openholidays(code: str, validFrom=None, validTo=None):
-    """Returns a list with school and public holidays of the current year.
-
-       Checkout https://openholidaysapi.org/swagger/index.html for more
-       information.
-    """
-    countryIsoCode, languageIsoCode = code.split('-')
-    year = date.today().year
-
-    base_url = "https://openholidaysapi.org/{type}Holidays"
-
-    params = dict(
-        countryIsoCode=countryIsoCode.upper(),
-        languageIsoCode=languageIsoCode.upper(),
-        validFrom=validFrom or f"{year}-01-01",
-        validTo=validTo or f"{year}-12-31",
-        subdivisionCode=f"{countryIsoCode}-{languageIsoCode}".upper()
-    )
-
-    try:
-
-        public = json.loads(
-            requests.get(
-                base_url.format(type="Public"), params, timeout=1
-            ).text
-        )
-
-        school = json.loads(
-            requests.get(
-                base_url.format(type="School"), params, timeout=1
-            ).text
-        )
-
-        holidays = public + school
-
-    except ConnectTimeout:
-
-        holidays = []
-
-    return holidays
-
-
-def is_holiday(code: str):
-    """Returns `True` if the current day is either a public or school holiday.
-    """
-
-    if not code:
-        return False
-
-    today = f"{date.today()}"
-
-    holiday = parse_openholidays(code, validFrom=today, validTo=today)
-
-    return True if holiday else False
-
-
-def system_call(command: list, log: logging.Logger = None, **kwargs):
-    """Execute a system call. Returns `True` on success.
-    """
-    if not isinstance(command, list):
-        raise TypeError("command should be a list!")
-    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
-
-    log.debug(' '.join(command))
-
-    p = Popen(command, stdout=PIPE, stderr=PIPE, **kwargs)
-
-    output, error = p.communicate()
-
-    log.debug(output.decode("utf-8"))
-
-    if p.returncode != 0:
-        log.error(error.decode("utf-8"))
-
-    return p.returncode == 0
-
-
 def play(wav: str, log: logging.Logger, test: bool = False):
     """Play the school bell. Returns `True` on success.
     """
@@ -160,8 +50,8 @@ def ring(key, wav, buzzer, trigger, holidays, log):
     """
 
     # check if current day is not a public/school holiday!
-    if is_holiday(holidays):
-        log.info(f"today is a holiday, no need to ring!")
+    if today_is_holiday(holidays):
+        log.info("today is a holiday, no need to ring!")
         return
 
     log.info(f"ring {key}={os.path.basename(wav)}!")
@@ -220,8 +110,10 @@ class DemoService(argparse.Action):
             service = demo_service.read()
             print(service.format(
                 BIN=os.path.join(sys.exec_prefix, 'bin', 'school-bell'),
-                CONFIG=os.path.expandvars(os.path.join('$HOME', 'school-bell.json')),
-                HOME=os.path.expandvars(os.path.join('$HOME')),
+                CONFIG=os.path.expandvars(
+                    os.path.join('$HOME', 'school-bell.json')
+                ),
+                HOME=os.path.expandvars('$HOME'),
                 GROUP=os.getlogin(),
                 USER=os.getlogin(),
             ))
@@ -243,7 +135,11 @@ class SelfUpdate(argparse.Action):
     """
     def __call__(self, parser, namespace, values, option_string=None):
         log = init_logger(debug=True)
-        system_call(['pip', 'install', 'git+https://github.com/psmsmets/school-bell'], log)
+        system_call([
+            'pip',
+            'install',
+            'git+https://github.com/psmsmets/school-bell'
+        ], log)
         log.info('school-bell updated.')
         sys.exit()
 
@@ -336,7 +232,9 @@ def main():
             raise TypeError(err)
 
     # get expanded root
-    root = os.path.expandvars(args.config['root'] if 'root' in args.config else '')
+    root = os.path.expandvars(
+        args.config['root'] if 'root' in args.config else ''
+    )
     log.info(f"root = {root}")
 
     # get openholidays subdivision code
