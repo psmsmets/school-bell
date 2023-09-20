@@ -82,7 +82,7 @@ class OpenHolidays(object):
         """
         return '/'.join([self.base_url, *args])
 
-    def _get(self, path:str, *args, **kwargs) -> list:
+    def _get(self, path: str, *args, **kwargs) -> list:
         """Returns the parsed json object of the get request to the API.
         """
         return json.loads(requests.get(self.url(path), *args, **kwargs).text)
@@ -140,7 +140,8 @@ class OpenHolidays(object):
     def publicHolidaysByDate(
         self, date: str, countryIsoCode: str = None, **kwargs
     ) -> list:
-        """Returns a list of public holidays from all countries for a given date
+        """Returns a list of public holidays from all countries
+        for a given date
 
         Parameters
         ----------
@@ -215,7 +216,8 @@ class OpenHolidays(object):
     def schoolHolidaysByDate(
         self, date: str, countryIsoCode: str = None, **kwargs
     ) -> list:
-        """Returns a list of school holidays from all countries for a given date
+        """Returns a list of school holidays from all countries
+        for a given date
 
         Parameters
         ----------
@@ -456,3 +458,15 @@ class OpenHolidays(object):
         self.__is_holiday = holiday
 
         return holiday
+
+    @property
+    def _isHoliday(self):
+        """Internal function
+        """
+        return self.__is_holiday
+
+    @property
+    def _isHolidayRequest(self):
+        """Internal function
+        """
+        return self.__is_holiday_request
