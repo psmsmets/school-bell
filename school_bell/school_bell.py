@@ -16,7 +16,7 @@ from threading import Thread
 # Relative imports
 try:
     from .version import version
-except (ValueError, ModuleNotFoundError):
+except (ValueError, ModuleNotFoundError, SyntaxError):
     version = "VERSION-NOT-FOUND"
 from .util import init_logger, is_raspberry_pi, system_call, today_is_holiday
 
