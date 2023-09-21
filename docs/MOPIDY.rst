@@ -127,6 +127,9 @@ Configure alsa:
 
 Edit ``/etc/asound.conf``
 
+
+Two mono zones:
+
 .. code-block:: sh
 
     pcm.output {
@@ -151,5 +154,30 @@ Edit ``/etc/asound.conf``
         pcm "output"
         channels 2
       }
+      ttable.0.1 1
+    }
+
+Mono out (for both left and right):
+
+.. code-block:: sh
+
+
+    pcm.output {
+      type hw
+      card 0
+    }
+
+    ctl.!default {
+      type hw
+      card 0
+    }
+
+    pcm.mono {
+      type plug
+      slave {
+        pcm "output"
+        channels 2
+      }
+      ttable.0.0 1
       ttable.0.1 1
     }
