@@ -59,7 +59,7 @@ def today_is_holiday(subdivisionCode: str):
         countryIsoCode=subdivisionCode.split('-')[1],
         languageIsoCode=subdivisionCode.split('-')[0],
         subdivisionCode=subdivisionCode,
-        timeout=.5
+        timeout=30
     )
 
 

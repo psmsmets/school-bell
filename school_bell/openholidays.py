@@ -3,7 +3,7 @@
 # absolute imports
 import json
 import requests
-from requests.exceptions import ConnectTimeout
+from requests.exceptions import Timeout
 
 
 __all__ = ['OpenHolidays']
@@ -399,7 +399,7 @@ class OpenHolidays(object):
         **kwargs
     ) -> list:
         """Returns True if the date is either a public or school holiday.
-        Returns False for any input error or a request.ConnectTimeout.
+        Returns False for any input error or a timeout.
 
         Parameters
         ----------
@@ -449,7 +449,7 @@ class OpenHolidays(object):
                 subdivisionCode=subdivisionCode,
                 **kwargs
             )
-        except ConnectTimeout:
+        except (ConnectTimeout, ReadTimeout, Timeout):
             return False
 
         holiday = False if not holiday or 'status' in holiday else True
