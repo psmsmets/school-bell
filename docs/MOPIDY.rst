@@ -28,7 +28,15 @@ Installing extensions:
     sudo python3 -m pip install Mopidy-Iris
     sudo sh -c 'echo "mopidy  ALL=NOPASSWD:   /usr/local/lib/python3.9/dist-packages/mopidy_iris/system.sh" >> /etc/sudoers'
 
-3. Mopidy-Spotify
+3. Mopidy-MPD and MPC
+
+.. code-block:: sh
+
+    # Mopidy-MPD
+    sudo python3 -m pip install Mopidy-MPD
+    sudo apt install -y mpc    
+
+4. Mopidy-Spotify
 
 .. code-block:: sh
      
@@ -38,14 +46,14 @@ Installing extensions:
     gst-inspect-1.0 spotify
     sudo python3 -m pip install https://github.com/mopidy/mopidy-spotify/archive/master.zip
 
-4. Mopidy-TuneIn
+5. Mopidy-TuneIn
 
 .. code-block:: sh
     
     # Mopidy-TuneIn
     sudo apt install mopidy-tunein
 
-5. Mopidy-Youtube
+6. Mopidy-Youtube
 
 .. code-block:: sh
     
@@ -75,15 +83,15 @@ Edit ``/etc/mopidy/mopidy.conf``
 
 .. code-block:: sh
 
-    [mpd]
-    enabled = true
-    hostname = ::
-
     [http]
-    # Make sure the web interface can be accessed by the local network
     hostname = 0.0.0.0
     port = 6680
     default_app = iris
+
+    [mpd]
+    enabled = true
+    hostname = 127.0.0.1
+    port = 6600
 
     [audio]
     mixer_volume = 85
