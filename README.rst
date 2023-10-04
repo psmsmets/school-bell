@@ -16,7 +16,7 @@ Install the Python package using ``pip``.
 
 .. code-block:: bash
 
-    pip install git+https://github.com/psmsmets/school-bell
+    pip install git+https://github.com/psmsmets/school-bell.git
 
 
 Usage
@@ -36,14 +36,14 @@ Type ``school-bell --help`` for the usage.
 
     optional arguments:
       -h, --help            show this help message and exit
-      -b [..], --buzz [..]  Buzz via RPi GPIO while the WAV audio file plays
+      -b [..], --buzz [..]  Buzz via RPi GPIO while the WAVE audio file plays
                             (default: False)
-      -p [..], --play [..]  Play a WAV audio file by specifying the key from the
+      -p [..], --play [..]  Play a WAVE audio file by specifying the key from the
                             JSON configuration and exit (default: False)
       --debug               Make the operation a lot more talkative
       --demo-config         Print the demo JSON configuration and exit
       --demo-service        Print the demo systemctl service for the current user and exit
-      --test                Play one second samples of each WAV audio file from
+      --test                Play one second samples of each WAVE audio file from
                             the JSON configuration at startup (default: False)
       --update              Update school-bell from git
       --version             Print the version and exit
@@ -70,7 +70,9 @@ Configuration (JSON)
             "1": "samples/ClassBell-SoundBible.com-1426436341.wav"
         },
         "root": "${HOME}",
-        "holidays": "NL-BE"
+        "device": "hw:0,0",
+        "holidays": "NL-BE",
+        "timeout": 10
     }
 
 The remote trigger requires an ``ssh-key`` to connect to the remote host!

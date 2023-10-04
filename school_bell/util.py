@@ -46,7 +46,7 @@ def is_raspberry_pi():
 __holidays = OpenHolidays()
 
 
-def today_is_holiday(subdivisionCode: str):
+def today_is_holiday(subdivisionCode: str, timeout = None):
     """Returns `True` if the current day is either a public or school holiday.
     Consecutive identical requests are returned from cache.
     """
@@ -59,7 +59,7 @@ def today_is_holiday(subdivisionCode: str):
         countryIsoCode=subdivisionCode.split('-')[1],
         languageIsoCode=subdivisionCode.split('-')[0],
         subdivisionCode=subdivisionCode,
-        timeout=30
+        timeout=timeout
     )
 
 

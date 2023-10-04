@@ -30,27 +30,32 @@ if not os.path.exists(share):
 
 # Check platform and set wav player
 if sys.platform in ("linux", "linux2"):
-    _play = "/usr/bin/aplay"
-    _play_test = [_play, '-d', '1']
+    _play = ["/usr/bin/aplay"]
+    _play_test = _play + ['-d', '1']
+    _alsa = True
 elif sys.platform == "darwin":
-    _play = "/usr/bin/afplay"
-    _play_test = [_play, '-t', '1']
+    _play = ["/usr/bin/afplay"]
+    _play_test = _play ['-t', '1']
+    _alsa = False
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
 
 
-def play(wav: str, log: logging.Logger, test: bool = False):
+def play(wav: str, device: str, log: logging.Logger, test: bool = False):
     """Play the school bell. Returns `True` on success.
     """
-    return system_call(_play_test + [wav] if test else [_play, wav], log)
+    cmd = _play_test if test else _play
+    cmd = cmd + ['-D', device, wav] if _alsa else cmd + [wav]
+
+    return system_call(cmd, log)
 
 
-def ring(key, wav, buzzer, trigger, holidays, log):
+def ring(key, wav, buzzer, trigger, device, holidays, timeout, log):
     """Ring the school bell
     """
 
     # check if current day is not a public/school holiday!
-    if today_is_holiday(holidays):
+    if today_is_holiday(holidays, timeout):
         log.info("today is a holiday, no need to ring!")
         return
 
@@ -60,7 +65,7 @@ def ring(key, wav, buzzer, trigger, holidays, log):
     for remote, command in trigger.items():
         threads.append(Thread(target=remote_ring,
                               args=(remote, [command, wav, '&'], log)))
-    threads.append(Thread(target=play, args=(wav, log)))
+    threads.append(Thread(target=play, args=(wav, device, log)))
 
     if buzzer:
         buzzer.on()
@@ -237,16 +242,22 @@ def main():
     )
     log.info(f"root = {root}")
 
-    # get openholidays subdivision code
+    # get alsa hardware output device (linux only)
+    device = args.config['device'] if 'device' in args.config else 'hw:0,0'
+    log.info(f"alsa output device = {device}")
+
+    # get openholidays subdivision code and timeout
     holidays = args.config['holidays'] if 'holidays' in args.config else False
+    timeout = args.config['timeout'] if 'timeout' in args.config else None
     log.info(f"openholidays api subdivision code = {holidays}")
+    log.info(f"openholidays api request timeout = {timeout}")
 
     # test by playing a single wav
     if args.play:
-        wav = args.config['wav'][args.test]
+        wav = args.config['wav'][args.play]
         log.info(f"test = {wav}")
         root_wav = os.path.expandvars(os.path.join(root, wav))
-        if not play(root_wav, log, test=False):
+        if not play(root_wav, device, log, test=False):
             err = f"Could not play {wav}!"
             log.error(err)
             raise RuntimeError(err)
@@ -262,7 +273,7 @@ def main():
             log.error(err)
             raise FileNotFoundError(err)
         if args.test:
-            if not play(root_wav, log, test=True):
+            if not play(root_wav, device, log, test=True):
                 err = f"Could not play {root_wav}!"
                 log.error(err)
                 raise RuntimeError(err)
@@ -287,7 +298,7 @@ def main():
 
     # ring wrapper
     def _ring(key, wav):
-        ring(key, wav, buzzer, trigger, holidays, log)
+        ring(key, wav, buzzer, trigger, device, holidays, log)
 
     # create schedule
     log.info("schedule =")
