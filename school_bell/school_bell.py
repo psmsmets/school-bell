@@ -35,7 +35,7 @@ if sys.platform in ("linux", "linux2"):
     _alsa = True
 elif sys.platform == "darwin":
     _play = ["/usr/bin/afplay"]
-    _play_test = _play ['-t', '1']
+    _play_test = _play + ['-t', '1']
     _alsa = False
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
@@ -143,7 +143,7 @@ class SelfUpdate(argparse.Action):
         system_call([
             'pip',
             'install',
-            'git+https://github.com/psmsmets/school-bell'
+            'git+https://github.com/psmsmets/school-bell.git@main'
         ], log)
         log.info('school-bell updated.')
         sys.exit()
@@ -176,6 +176,10 @@ def main():
         help='Make the operation a lot more talkative'
     )
     parser.add_argument(
+        '--update', action=SelfUpdate, nargs=0,
+        help='Update %(prog)s from git'
+    )
+    parser.add_argument(
         '--demo-config', action=DemoConfig, nargs=0,
         help='Print the demo JSON configuration and exit'
     )
@@ -185,13 +189,9 @@ def main():
     )
     parser.add_argument(
         '--test', action='store_true', default=False,
-        help=('Play one second samples of each WAV audio file from '
+        help=('Play one second samples of each WAVE audio file from '
               'the JSON configuration at startup '
               '(default: %(default)s)')
-    )
-    parser.add_argument(
-        '--update', action=SelfUpdate, nargs=0,
-        help='Update %(prog)s from git'
     )
     parser.add_argument(
         '--version', action='version', version=version,
@@ -255,13 +255,14 @@ def main():
     # test by playing a single wav
     if args.play:
         wav = args.config['wav'][args.play]
-        log.info(f"test = {wav}")
+        log.info(f"play = {wav}")
         root_wav = os.path.expandvars(os.path.join(root, wav))
         if not play(root_wav, device, log, test=False):
             err = f"Could not play {wav}!"
             log.error(err)
             raise RuntimeError(err)
-        raise SystemExit("test completed")
+        log.info("Play completed succesfully.")
+        raise SystemExit()
 
     # verify all wav
     log.info("wav =")
@@ -322,7 +323,7 @@ def main():
     log.info('Schedule started')
     while True:
         schedule.run_pending()
-        sleep(.5)
+        sleep(.2)
 
 
 if __name__ == "__main__":
