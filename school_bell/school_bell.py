@@ -176,10 +176,6 @@ def main():
         help='Make the operation a lot more talkative'
     )
     parser.add_argument(
-        '--update', action=SelfUpdate, nargs=0,
-        help='Update %(prog)s from git'
-    )
-    parser.add_argument(
         '--demo-config', action=DemoConfig, nargs=0,
         help='Print the demo JSON configuration and exit'
     )
@@ -192,6 +188,10 @@ def main():
         help=('Play one second samples of each WAVE audio file from '
               'the JSON configuration at startup '
               '(default: %(default)s)')
+    )
+    parser.add_argument(
+        '--update', action=SelfUpdate, nargs=0,
+        help='Update %(prog)s from git'
     )
     parser.add_argument(
         '--version', action='version', version=version,
