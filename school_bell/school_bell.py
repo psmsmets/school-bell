@@ -254,7 +254,7 @@ def main():
 
     # test by playing a single wav
     if args.play:
-        wav = args.config['wav'][args.test]
+        wav = args.config['wav'][args.play]
         log.info(f"test = {wav}")
         root_wav = os.path.expandvars(os.path.join(root, wav))
         if not play(root_wav, device, log, test=False):
