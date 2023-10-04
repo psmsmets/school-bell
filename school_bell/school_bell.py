@@ -32,11 +32,11 @@ if not os.path.exists(share):
 if sys.platform in ("linux", "linux2"):
     _play = ["/usr/bin/aplay"]
     _play_test = _play + ['-d', '1']
-    _device = True
+    _alsa = True
 elif sys.platform == "darwin":
     _play = ["/usr/bin/afplay"]
     _play_test = _play ['-t', '1']
-    _device = False
+    _alsa = False
 elif sys.platform in ("win32", "win64"):
     raise NotImplementedError('school_bell.py does not work on Windows')
 
@@ -45,7 +45,7 @@ def play(wav: str, device: str, log: logging.Logger, test: bool = False):
     """Play the school bell. Returns `True` on success.
     """
     cmd = _play_test if test else _play
-    cmd = cmd + ['-D', device, wav] if _device else cmd + [wav]
+    cmd = cmd + ['-D', device, wav] if _alsa else cmd + [wav]
 
     return system_call(cmd, log)
 

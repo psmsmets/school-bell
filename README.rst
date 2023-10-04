@@ -70,7 +70,9 @@ Configuration (JSON)
             "1": "samples/ClassBell-SoundBible.com-1426436341.wav"
         },
         "root": "${HOME}",
-        "holidays": "NL-BE"
+        "device": "hw:0,0",
+        "holidays": "NL-BE",
+        "timeout": 10
     }
 
 The remote trigger requires an ``ssh-key`` to connect to the remote host!
