@@ -16,7 +16,7 @@ Install the Python package using ``pip``.
 
 .. code-block:: bash
 
-    pip install git+https://github.com/psmsmets/school-bell
+    pip install git+https://github.com/psmsmets/school-bell.git
 
 
 Usage

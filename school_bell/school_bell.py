@@ -257,7 +257,7 @@ def main():
         wav = args.config['wav'][args.test]
         log.info(f"test = {wav}")
         root_wav = os.path.expandvars(os.path.join(root, wav))
-        if not play(root_wav, log, test=False):
+        if not play(root_wav, device, log, test=False):
             err = f"Could not play {wav}!"
             log.error(err)
             raise RuntimeError(err)
@@ -273,7 +273,7 @@ def main():
             log.error(err)
             raise FileNotFoundError(err)
         if args.test:
-            if not play(root_wav, log, test=True):
+            if not play(root_wav, device, log, test=True):
                 err = f"Could not play {root_wav}!"
                 log.error(err)
                 raise RuntimeError(err)
