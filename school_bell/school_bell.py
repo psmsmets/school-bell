@@ -45,7 +45,7 @@ def play(wav: str, device: str, log: logging.Logger, test: bool = False):
     """Play the school bell. Returns `True` on success.
     """
     cmd = _play_test if test else _play
-    cmd = cmd + ['-D', device, wav] if _alsa else cmd + [wav]
+    cmd = cmd + ['-D', device, wav] if (_alsa and device) else cmd + [wav]
 
     log.debug(f"system_call = {cmd}")
 
@@ -245,7 +245,7 @@ def main():
     log.info(f"root = {root}")
 
     # get alsa hardware output device (linux only)
-    device = args.config['device'] if 'device' in args.config else 'hw:0,0'
+    device = args.config['device'] if 'device' in args.config else None
     log.info(f"alsa output device = {device}")
 
     # get openholidays subdivision code and timeout
