@@ -299,7 +299,7 @@ def main():
 
     # ring wrapper
     def _ring(key, wav):
-        ring(key, wav, buzzer, trigger, device, holidays, log)
+        ring(key, wav, buzzer, trigger, device, holidays, timeout, log)
 
     # create schedule
     log.info("schedule =")
