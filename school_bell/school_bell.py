@@ -47,6 +47,8 @@ def play(wav: str, device: str, log: logging.Logger, test: bool = False):
     cmd = _play_test if test else _play
     cmd = cmd + ['-D', device, wav] if _alsa else cmd + [wav]
 
+    log.debug(f"system_call = {cmd}")
+
     return system_call(cmd, log)
 
 
