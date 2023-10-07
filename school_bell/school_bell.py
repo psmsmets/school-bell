@@ -141,11 +141,12 @@ class SelfUpdate(argparse.Action):
     """Argparse action to self-update the school-bell code from git.
     """
     def __call__(self, parser, namespace, values, option_string=None):
+        branch = values or 'main'
         log = init_logger(debug=True)
         system_call([
             'pip',
             'install',
-            'git+https://github.com/psmsmets/school-bell.git@main'
+            f"git+https://github.com/psmsmets/school-bell.git@{branch}"
         ], log)
         log.info('school-bell updated.')
         sys.exit()
@@ -192,8 +193,9 @@ def main():
               '(default: %(default)s)')
     )
     parser.add_argument(
-        '--update', action=SelfUpdate, nargs=0,
-        help='Update %(prog)s from git'
+        '--update', action=SelfUpdate, metavar='..', nargs='?', type=str, default='main',
+        help=('Update %(prog)s from git. Optionally set the branch '
+              '(default: %(default)s)')
     )
     parser.add_argument(
         '--version', action='version', version=version,
