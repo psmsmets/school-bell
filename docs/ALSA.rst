@@ -81,7 +81,7 @@ Split the 8-channel outputs of the ESI GIGAPORT eX to multiple stereo PCM device
        ipc_key_add_uid false
        ipc_perm 0666
        slave {
-           pcm "hw:1,0"
+           pcm "Gigaport"
            rate 48000
            period_time 0
            period_size 1024
