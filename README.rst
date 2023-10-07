@@ -45,7 +45,7 @@ Type ``school-bell --help`` for the usage.
       --demo-service        Print the demo systemctl service for the current user and exit
       --test                Play one second samples of each WAVE audio file from
                             the JSON configuration at startup (default: False)
-      --update              Update school-bell from git
+      --update [..]         Update school-bell from git. Optionally set the branch (default: main)
       --version             Print the version and exit
 
 
