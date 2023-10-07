@@ -70,7 +70,7 @@ Configuration (JSON)
             "1": "samples/ClassBell-SoundBible.com-1426436341.wav"
         },
         "root": "${HOME}",
-        "device": "hw:0,0",
+        # "device": "hw:0,0",
         "holidays": "NL-BE",
         "timeout": 10
     }
