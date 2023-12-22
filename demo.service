@@ -11,8 +11,8 @@ Environment="VIRTUAL_ENV={HOME}/.local"
 Environment="PATH=$VIRTUAL_ENV/bin:$PATH"
 ExecStart=
 ExecStart={BIN} {CONFIG} --debug
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=school-bell
 Restart=always
 

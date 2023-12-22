@@ -3,6 +3,7 @@
 # absolute imports
 import logging
 import os
+import requests
 import sys
 from datetime import date
 from subprocess import Popen, PIPE
@@ -14,7 +15,9 @@ from .openholidays import OpenHolidays
 __all__ = ['init_logger', 'is_raspberry_pi', 'system_call', 'today_is_holiday']
 
 
-def init_logger(prog=None, debug=False):
+def init_logger(
+    prog=None, debug=False
+):
     """Create the logger object
     """
     # create logger
@@ -46,30 +49,44 @@ def is_raspberry_pi():
 __holidays = OpenHolidays()
 
 
-def today_is_holiday(subdivisionCode: str, timeout = None):
+def today_is_holiday(
+    subdivisionCode: str, timeout=None, log: logging.Logger = None,
+    **kwargs
+):
     """Returns `True` if the current day is either a public or school holiday.
     Consecutive identical requests are returned from cache.
     """
-
     if not subdivisionCode:
         return False
 
-    return __holidays.isHoliday(
-        date=f"{date.today()}",
-        countryIsoCode=subdivisionCode.split('-')[1],
-        languageIsoCode=subdivisionCode.split('-')[0],
-        subdivisionCode=subdivisionCode,
-        timeout=timeout
-    )
+    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
+
+    try:
+        holiday = __holidays.isHoliday(
+            date=f"{date.today()}",
+            countryIsoCode=subdivisionCode.split('-')[1],
+            languageIsoCode=subdivisionCode.split('-')[0],
+            subdivisionCode=subdivisionCode,
+            timeout=timeout,
+            **kwargs
+        )
+    except requests.exceptions.RequestException as e:
+        holiday = False
+        log.warning(e)
+
+    return holiday
 
 
-def system_call(command: list, log: logging.Logger = None, **kwargs):
+def system_call(
+    command: list, log: logging.Logger = None,
+    **kwargs
+):
     """Execute a system call. Returns `True` on success.
     """
     if not isinstance(command, list):
         raise TypeError("command should be a list!")
-    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
 
+    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
     log.debug(' '.join(command))
 
     p = Popen(command, stdout=PIPE, stderr=PIPE, **kwargs)

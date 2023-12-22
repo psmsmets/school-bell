@@ -57,7 +57,7 @@ def ring(key, wav, buzzer, trigger, device, holidays, timeout, log):
     """
 
     # check if current day is not a public/school holiday!
-    if today_is_holiday(holidays, timeout):
+    if today_is_holiday(holidays, timeout, log):
         log.info("today is a holiday, no need to ring!")
         return
 
@@ -175,7 +175,8 @@ def main():
               '(default: %(default)s)')
     )
     parser.add_argument(
-        '--debug', action='store_true', default=False,
+        '--debug', action='store_true',
+        default=False,
         help='Make the operation a lot more talkative'
     )
     parser.add_argument(
@@ -187,13 +188,15 @@ def main():
         help='Print the demo systemctl service for the current user and exit'
     )
     parser.add_argument(
-        '--test', action='store_true', default=False,
+        '--test', action='store_true',
+        default=False,
         help=('Play one second samples of each WAVE audio file from '
               'the JSON configuration at startup '
               '(default: %(default)s)')
     )
     parser.add_argument(
-        '--update', action=SelfUpdate, metavar='..', nargs='?', type=str, default='main',
+        '--update', action=SelfUpdate, metavar='..', nargs='?', type=str,
+        default='main',
         help=('Update %(prog)s from git. Optionally set the branch '
               '(default: %(default)s)')
     )

@@ -3,7 +3,6 @@
 # absolute imports
 import json
 import requests
-from requests.exceptions import Timeout
 
 
 __all__ = ['OpenHolidays']
@@ -432,25 +431,22 @@ class OpenHolidays(object):
 
         args = dict(
             validFrom=date,
-            countryIsoCode=countryIsoCode,
-            languageIsoCode=languageIsoCode,
-            subdivisionCode=subdivisionCode,
+            countryIsoCode=countryIsoCode or self.countryIsoCode,
+            languageIsoCode=languageIsoCode or self.languageIsoCode,
+            subdivisionCode=subdivisionCode or self.subdivisionCode
             **kwargs
         )
 
         if self.__is_holiday_request == json.dumps(args):
             return self.__is_holiday
 
-        try:
-            holiday = self.holidays(
-                validFrom=date,
-                countryIsoCode=countryIsoCode,
-                languageIsoCode=languageIsoCode,
-                subdivisionCode=subdivisionCode,
-                **kwargs
-            )
-        except (ConnectTimeout, ReadTimeout, Timeout):
-            return False
+        holiday = self.holidays(
+            validFrom=date,
+            countryIsoCode=countryIsoCode,
+            languageIsoCode=languageIsoCode,
+            subdivisionCode=subdivisionCode,
+            **kwargs
+        )
 
         holiday = False if not holiday or 'status' in holiday else True
 
