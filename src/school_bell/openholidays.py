@@ -137,7 +137,7 @@ class OpenHolidays(object):
         return self._get('PublicHolidays', args, **kwargs)
 
     def publicHolidaysByDate(
-        self, date: str, countryIsoCode: str = None, **kwargs
+        self, date: str, languageIsoCode: str = None, **kwargs
     ) -> list:
         """Returns a list of public holidays from all countries
         for a given date
@@ -157,7 +157,7 @@ class OpenHolidays(object):
             Parameters passed to :func:`requests.get`.
         """
         args = dict(
-            countryIsoCode=countryIsoCode or self.__countryIsoCode,
+            languageIsoCode=languageIsoCode or self.languageIsoCode,
             date=date,
         )
         return self._get('PublicHolidaysByDate', args, **kwargs)
@@ -213,7 +213,7 @@ class OpenHolidays(object):
         return self._get('SchoolHolidays', args, **kwargs)
 
     def schoolHolidaysByDate(
-        self, date: str, countryIsoCode: str = None, **kwargs
+        self, date: str, languageIsoCode: str = None, **kwargs
     ) -> list:
         """Returns a list of school holidays from all countries
         for a given date
@@ -233,7 +233,7 @@ class OpenHolidays(object):
             Parameters passed to :func:`requests.get`.
         """
         args = dict(
-            countryIsoCode=countryIsoCode or self.__countryIsoCode,
+            languageIsoCode=languageIsoCode or self.languageIsoCode,
             date=date,
         )
         return self._get('SchoolHolidaysByDate', args, **kwargs)
@@ -433,20 +433,14 @@ class OpenHolidays(object):
             validFrom=date,
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            subdivisionCode=subdivisionCode or self.subdivisionCode
+            subdivisionCode=subdivisionCode or self.subdivisionCode,
             **kwargs
         )
 
         if self.__is_holiday_request == json.dumps(args):
             return self.__is_holiday
 
-        holiday = self.holidays(
-            validFrom=date,
-            countryIsoCode=countryIsoCode,
-            languageIsoCode=languageIsoCode,
-            subdivisionCode=subdivisionCode,
-            **kwargs
-        )
+        holiday = self.holidays(**args)
 
         holiday = False if not holiday or 'status' in holiday else True
 
