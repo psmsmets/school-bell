@@ -46,7 +46,7 @@ def is_raspberry_pi():
     return model.startswith("Raspberry Pi")
 
 
-__holidays = OpenHolidays()
+__oh = OpenHolidays()
 
 
 def today_is_holiday(
@@ -62,7 +62,7 @@ def today_is_holiday(
     log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
 
     try:
-        holiday = __holidays.isHoliday(
+        holiday = __oh.isHoliday(
             date=f"{date.today()}",
             countryIsoCode=subdivisionCode.split('-')[1],
             languageIsoCode=subdivisionCode.split('-')[0],

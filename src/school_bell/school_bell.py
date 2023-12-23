@@ -18,7 +18,7 @@ try:
     from .version import version
 except (ValueError, ModuleNotFoundError, SyntaxError):
     version = "VERSION-NOT-FOUND"
-from .util import init_logger, is_raspberry_pi, system_call, today_is_holiday
+from .utils import init_logger, is_raspberry_pi, system_call, today_is_holiday
 
 # Set path of demo files
 share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
