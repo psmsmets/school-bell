@@ -253,11 +253,16 @@ def main():
     device = args.config['device'] if 'device' in args.config else None
     log.info(f"alsa output device = {device}")
 
-    # get openholidays subdivision code and timeout
+    # get openholidays subdivision code and timeout and check daily
     holidays = args.config['holidays'] if 'holidays' in args.config else False
     timeout = args.config['timeout'] if 'timeout' in args.config else None
     log.info(f"openholidays api subdivision code = {holidays}")
     log.info(f"openholidays api request timeout = {timeout}")
+
+    if holidays:
+        schedule.every().day.at("01:00").do(
+            today_is_holiday, holidays, timeout, log
+        )
 
     # test by playing a single wav
     if args.play:
