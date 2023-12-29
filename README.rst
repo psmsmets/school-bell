@@ -70,13 +70,13 @@ Configuration (JSON)
             "Fri": {"08:30": 0, "12:00": 0, "15:00": 0}
         },
         "trigger": {
-            "pibell2": "/usr/bin/aplay"
+            "pibell2": "${HOME}/samples"
         },
         "wav": {
-            "0": "samples/SchoolBell-SoundBible.com-449398625.wav",
-            "1": "samples/ClassBell-SoundBible.com-1426436341.wav"
+            "0": "SchoolBell-SoundBible.com-449398625.wav",
+            "1": "ClassBell-SoundBible.com-1426436341.wav"
         },
-        "root": "${HOME}",
+        "root": "${HOME}/samples",
         "device": "Headphones",
         "holidays": "NL-BE",
         "timeout": 10
