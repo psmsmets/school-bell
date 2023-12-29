@@ -23,16 +23,16 @@ __all__ = ['SchoolBell']
 
 
 # Check platform and set wav player
-if sys.platform in ("linux", "linux2"):
-    __alsa = True
-    __play = ["/usr/bin/aplay"]
-    __play_test = __play + ['-d', '1']
+if sys.platform in ("win32", "win64"):
+    raise NotImplementedError("school_bell does not run on Windows")
 elif sys.platform == "darwin":
     __alsa = False
     __play = ["/usr/bin/afplay"]
     __play_test = __play + ['-t', '1']
-elif sys.platform in ("win32", "win64"):
-    raise NotImplementedError("school_bell does not run on Windows")
+else:
+    __alsa = True
+    __play = ["/usr/bin/aplay"]
+    __play_test = __play + ['-d', '1']
 
 
 class SchoolBell(object):
@@ -43,13 +43,13 @@ class SchoolBell(object):
         self,
         schedule: dict,
         wav: dict,
+        root: str = None,
+        test: bool = None,
         device: str = None,
         buzz_gpio: int = None,
-        root: str = None,
-        trigger: dict = None,
-        holidays: str = None,
         timeout: int = None,
-        test: bool = None,
+        holidays: str = None,
+        trigger: dict = None,
         debug: bool = None,
         prog: str = None,
         info: str = None,
@@ -57,40 +57,38 @@ class SchoolBell(object):
         """Initialize the SchoolBell object
         """
 
-        # Logger
+        # Preamble
         prog = prog or 'school-bell'
         info = info or 'Python scheduled ringing of the school bell.'
         self.__logger = init_logger(prog, debug or False)
+        self.__alsa = sys.platform != "darwin"
         self.log.info(info)
         self.log.info(f"version = {version}")
 
         # Init
-        self.wav = wav or dict()
-        self.trigger = trigger or dict()
-        self.device = device
+        self.root = root or None
         self.test = test or False
-        self.root = os.path.expandvars(root or '')
+        self.device = device or None
         self.buzzer = buzz_gpio or None
         self.timeout = timeout or 10
         self.holidays = holidays or None
+        self.trigger = trigger or dict()
+        self.wav = wav or dict()
 
-    @property
-    def _alsa(self):
-        """Internal property to enable alsa devices.
-        """
-        return self.__alsa
+        # Create schedule
+        self.schedule(schedule)
 
     @property
     def device(self):
         """Internal property to the alsa device.
         """
-        return self.__device if self._alsa else None
+        return self.__device if self.__alsa else None
 
     @device.setter
     def device(self, value: str):
         """Internal property to the alsa device.
         """
-        if self._alsa:
+        if self.__alsa:
             self.log.info(f"alsa device = {value}")
             try:
                 self.__device = str(value)
@@ -105,17 +103,19 @@ class SchoolBell(object):
 
     @buzzer.setter
     def buzzer(self, gpio_pin: int):
-        self.log.info(f"buzzer = {gpio_pin}")
+        self.log.info(f"buzzer = {gpio_pin or False}")
         self.__buzzer = False
-        if is_raspberry_pi():
-            try:
-                self.__buzzer = Buzzer(gpio_pin)
-                self.log.debug(f"  {self.__buzzer}")
-            except Exception as err:
-                self.log.error(err)
-                raise Exception(err)
-        else:
-            self.log.warning("Host is not a Raspberry Pi: buzzer disabled!")
+        if isinstance(gpio_pin, int):
+            if is_raspberry_pi():
+                try:
+                    self.__buzzer = Buzzer(gpio_pin)
+                    self.log.debug(f"  {self.__buzzer}")
+                except Exception as err:
+                    self.log.error(err)
+                    raise Exception(err)
+            else:
+                self.log.warning("Host is not a Raspberry Pi:"
+                                 " buzzer disabled!")
 
     @property
     def log(self):
@@ -134,11 +134,13 @@ class SchoolBell(object):
         """Set the root directory.
         """
         self.log.info(f"root = {value}")
-        path = os.path.expandvars(value)
+        path = os.path.expandvars(value or '')
         if os.path.isdir(path):
             self.__root = value
         else:
-            self.log.error(f"Root directory \"{value}\" does not exist!")
+            err = f"Root directory \"{value}\" does not exist!"
+            self.log.error(err)
+            raise FileNotFoundError(err)
 
     @property
     def test(self):
@@ -222,7 +224,7 @@ class SchoolBell(object):
             self.log.error(err)
             raise FileNotFoundError(err)
         if self.test:
-            if not self.play(wav, test=True):
+            if not _play(wav, True, self.device, self.log):
                 err = f"Could not play {wav}!"
                 self.log.error(err)
                 raise RuntimeError(err)
@@ -235,9 +237,9 @@ class SchoolBell(object):
     def get_wav(self, key: str, root: str = None):
         """Get a local wav given the key.
         """
-        root = self._root if root is None else root
+        root = self.root if root is None else root
         try:
-            wav = self._wav[str(key)]
+            wav = self.wav[str(key)]
         except KeyError:
             err = f"wav key \"{key}\" is not related to any sample!"
             self.log.error(err)
@@ -254,7 +256,7 @@ class SchoolBell(object):
             self.log.error(err)
             raise KeyError(err)
         try:
-            wav = self._wav[str(key)]
+            wav = self.wav[str(key)]
         except KeyError:
             err = f"wav key \"{key}\" is not related to any sample!"
             self.log.error(err)
@@ -281,7 +283,7 @@ class SchoolBell(object):
 
         for host, root in value:
             self.log.info(f"  remote ring {host}")
-            self._add_trigger(host, root)
+            self.add_trigger(host, root)
 
     def add_trigger(self, host: str, root: str = None):
         """Add a remote linux device to trigger over ssh.
@@ -365,9 +367,9 @@ class SchoolBell(object):
             )
         )
 
-        if self._buzzer:
+        if self.buzzer:
             self.log.debug(".. buzzer on")
-            self._buzzer.on()
+            self.buzzer.on()
 
         self.log.debug(".. start threads")
         for t in threads:
@@ -377,13 +379,13 @@ class SchoolBell(object):
         for t in threads:
             t.join()
 
-        if self._buzzer:
+        if self.buzzer:
             self.log.debug(".. buzzer off")
-            self._buzzer.off()
+            self.buzzer.off()
 
         self.log.debug(".. done")
 
-    def create_schedule(self, value: dict = None, **kwargs):
+    def schedule(self, value: dict = None, **kwargs):
         """Create a schedule
         """
         if not (isinstance(value, dict) and len(value) != 0):
