@@ -215,7 +215,6 @@ class OpenHolidays(object):
             validTo=str(validTo or validFrom),
             subdivisionCode=subdivisionCode or self.subdivisionCode
         )
-        print(args)
         return self._get('SchoolHolidays', args, **kwargs)
 
     def schoolHolidaysByDate(
