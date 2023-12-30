@@ -59,7 +59,7 @@ class SchoolBell(object):
 
         # Preamble
         prog = prog or 'school-bell'
-        info = info or 'Python scheduled ringing of the school bell.'
+        info = info or 'Python-scheduled ringing of a school bell.'
         self.__logger = init_logger(prog, debug or False)
         self.__alsa = sys.platform != "darwin"
         self.log.info(info)
@@ -186,8 +186,11 @@ class SchoolBell(object):
         """
         self.__holidays = None
         self.log.info(f"holidays = {subdivisionCode or False}")
-        if isinstance(subdivisionCode, str) or subdivisionCode is None:
+        if isinstance(subdivisionCode, str):
             self.__holidays = subdivisionCode
+            schedule.every().day.at("01:00").do(
+                today_is_holiday, subdivisionCode, self.timeout, self.log
+            )
         else:
             raise TypeError("holidays subdivisionCode should be of type str!")
 

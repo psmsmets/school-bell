@@ -73,7 +73,7 @@ def main():
     """
 
     prog = 'school-bell'
-    info = 'Python scheduled ringing of the school bell.'
+    info = 'Python-scheduled ringing of a school bell.'
 
     # arguments
     parser = argparse.ArgumentParser(prog=prog, description=info)

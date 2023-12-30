@@ -2,7 +2,7 @@
 School Bell
 *************************************
 
-Python scheduled ringing of the school bell. 
+Python-scheduled ringing of a school bell. 
 
 A Python-wrapper to the `OpenHolidays API`_ is used to 
 optionally disable ringing on public and school holidays. 
