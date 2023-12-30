@@ -4,6 +4,9 @@
 import json
 import requests
 
+# Relative imports
+from .utils import to_date
+
 
 __all__ = ['OpenHolidays']
 
@@ -84,12 +87,15 @@ class OpenHolidays(object):
     def _get(self, path: str, *args, **kwargs) -> list:
         """Returns the parsed json object of the get request to the API.
         """
-        return json.loads(requests.get(self.url(path), *args, **kwargs).text)
+        parse_dates = kwargs.pop('parse_dates', True)
+        data = json.loads(requests.get(self.url(path), *args, **kwargs).text)
+        if parse_dates:
+            _parse_holiday_dates(data)
+        return data
 
     def publicHolidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None,
-        **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
     ) -> list:
         """Returns a list of public holidays for a given country
 
@@ -130,8 +136,8 @@ class OpenHolidays(object):
         args = dict(
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            validFrom=validFrom,
-            validTo=validTo or validFrom,
+            validFrom=str(validFrom),
+            validTo=str(validTo or validFrom),
             subdivisionCode=subdivisionCode or self.subdivisionCode
         )
         return self._get('PublicHolidays', args, **kwargs)
@@ -158,14 +164,13 @@ class OpenHolidays(object):
         """
         args = dict(
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            date=date,
+            date=str(date),
         )
         return self._get('PublicHolidaysByDate', args, **kwargs)
 
     def schoolHolidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None,
-        **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
     ) -> list:
         """Returns a list of school holidays for a given country
 
@@ -206,10 +211,11 @@ class OpenHolidays(object):
         args = dict(
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            validFrom=validFrom,
-            validTo=validTo or validFrom,
+            validFrom=str(validFrom),
+            validTo=str(validTo or validFrom),
             subdivisionCode=subdivisionCode or self.subdivisionCode
         )
+        print(args)
         return self._get('SchoolHolidays', args, **kwargs)
 
     def schoolHolidaysByDate(
@@ -234,14 +240,13 @@ class OpenHolidays(object):
         """
         args = dict(
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            date=date,
+            date=str(date),
         )
         return self._get('SchoolHolidaysByDate', args, **kwargs)
 
     def holidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None,
-        **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
     ) -> list:
         """Returns a list of public and school holidays for a given country
 
@@ -282,17 +287,17 @@ class OpenHolidays(object):
         args = dict(
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
-            validFrom=validFrom,
-            validTo=validTo or validFrom,
+            validFrom=str(validFrom),
+            validTo=str(validTo or validFrom),
             subdivisionCode=subdivisionCode or self.subdivisionCode
         )
         return (
-            self._get('PublicHolidays', args, **kwargs) +
-            self._get('SchoolHolidays', args, **kwargs)
+            self._get('SchoolHolidays', args, **kwargs) +
+            self._get('PublicHolidays', args, **kwargs)
         )
 
     def holidaysByDate(
-        self, date: str, countryIsoCode: str = None, **kwargs
+        self, date: str, languageIsoCode: str = None, **kwargs
     ) -> list:
         """Returns a list of public and school holidays from all countries
         for a given date
@@ -314,12 +319,12 @@ class OpenHolidays(object):
             Parameters passed to :func:`requests.get`.
         """
         args = dict(
-            countryIsoCode=countryIsoCode or self.__countryIsoCode,
-            date=date,
+            countryIsoCode=languageIsoCode or self.__languageIsoCode,
+            date=str(date),
         )
         return (
-            self._get('SchoolHolidaysByDate', args, **kwargs) +
-            self._get('PublicHolidaysByDate', args, **kwargs)
+            self._get('PublicHolidaysByDate', args, **kwargs) +
+            self._get('SchoolHolidaysByDate', args, **kwargs)
         )
 
     def countries(
@@ -430,7 +435,7 @@ class OpenHolidays(object):
         """
 
         args = dict(
-            validFrom=date,
+            validFrom=str(date),
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
             subdivisionCode=subdivisionCode or self.subdivisionCode,
@@ -460,3 +465,15 @@ class OpenHolidays(object):
         """Internal function
         """
         return self.__is_holiday_request
+
+
+def _parse_holiday_dates(holidays: list):
+    """Parse the holidays list and inplace convert dates to `datetime.date`.
+    """
+    if not isinstance(holidays, list):
+        return
+    for i in range(len(holidays)):
+        if 'startDate' in holidays[i]:
+            holidays[i]['startDate'] = to_date(holidays[i]['startDate'])
+        if 'endDate' in holidays[i]:
+            holidays[i]['endDate'] = to_date(holidays[i]['endDate'])
