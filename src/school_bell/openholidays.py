@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 # absolute imports
+import datetime
 import json
 import requests
 
@@ -476,3 +477,21 @@ def _parse_holiday_dates(holidays: list):
             holidays[i]['startDate'] = to_date(holidays[i]['startDate'])
         if 'endDate' in holidays[i]:
             holidays[i]['endDate'] = to_date(holidays[i]['endDate'])
+
+
+def is_holiday(date, holidays: list):
+    """Returns `True` if the given date is a holiday.
+    """
+    if isinstance(date, str):
+        date = to_date(date)
+
+    if not isinstance(date, datetime.date):
+        raise TypeError('date should be a datetime.date')
+
+    if not isinstance(holidays, list):
+        raise TypeError('holidays should be a list')
+
+    for holiday in holidays:
+        if date >= holiday['startDate'] and date <= holiday['endDate']:
+            return True
+    return False
