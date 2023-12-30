@@ -9,7 +9,7 @@ import requests
 from .utils import to_date
 
 
-__all__ = ['OpenHolidays']
+__all__ = ['OpenHolidays', 'is_holiday']
 
 
 class OpenHolidays(object):
@@ -481,9 +481,21 @@ def _parse_holiday_dates(holidays: list):
 
 def is_holiday(date, holidays: list):
     """Returns `True` if the given date is a holiday.
+
+    Parameters
+    ----------
+    date : `str` or `datetime.date`
+        Date of interest (format: %Y-%m-%d).
+
+        _Example_: 2023-12-25
+
+    holidays : `list`
+        A list containing dictionaries per holiday.
     """
     if isinstance(date, str):
         date = to_date(date)
+    elif isinstance(date, datetime.datetime):
+        date = date.date()
 
     if not isinstance(date, datetime.date):
         raise TypeError('date should be a datetime.date')
