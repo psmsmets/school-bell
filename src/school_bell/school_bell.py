@@ -188,6 +188,8 @@ class SchoolBell(object):
         self.log.info(f"holidays = {subdivisionCode or False}")
         if isinstance(subdivisionCode, str):
             self.__holidays = subdivisionCode
+
+            # todo: replace by an internal function
             schedule.every().day.at("01:00").do(
                 today_is_holiday, subdivisionCode, self.timeout, self.log
             )
