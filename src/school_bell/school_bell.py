@@ -76,7 +76,7 @@ class SchoolBell(object):
         self.wav = wav or dict()
 
         # Create schedule
-        self.schedule(schedule)
+        self.create_schedule(schedule)
 
     @property
     def device(self):
@@ -304,7 +304,7 @@ class SchoolBell(object):
         """Play a wav given the key.
         """
         wav = self.get_wav(key)
-        self.log.info(f"play {key}={os.path.basename(wav)}")
+        self.log.info(f"play wav = {key}:{os.path.basename(wav)}")
 
         success = _play(
             wav=wav,
@@ -323,7 +323,7 @@ class SchoolBell(object):
         """Play a remote wav given the host and key.
         """
         wav = self.get_remote_wav(host, key)
-        self.log.info(f"play remote {key}={os.path.basename(wav)}")
+        self.log.info(f"play remote wav {key}:{os.path.basename(wav)}")
 
         success = _play_remote(
             host=host,
@@ -385,7 +385,7 @@ class SchoolBell(object):
 
         self.log.debug(".. done")
 
-    def schedule(self, value: dict = None, **kwargs):
+    def create_schedule(self, value: dict = None, **kwargs):
         """Create a schedule
         """
         if not (isinstance(value, dict) and len(value) != 0):
@@ -423,7 +423,7 @@ class SchoolBell(object):
     def run_schedule(self):
         """
         """
-        self.log.info('Schedule started')
+        self.log.info('Start schedule.')
         while True:
             schedule.run_pending()
             sleep(.2)

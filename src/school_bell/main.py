@@ -153,15 +153,14 @@ def main():
     args.config['prog'] = prog
     args.config['info'] = info
 
+    # init
+    obj = SchoolBell(**args.config)
+
     # play a test file or run the schedule
     if args.play:
-        args.config.pop('schedule', False)
-        args.config.pop('trigger', False)
-        obj = SchoolBell(**args.config)
         obj.play(args.play)
         raise SystemExit()
     else:
-        obj = SchoolBell(**args.config)
         obj.run_schedule()
 
 
