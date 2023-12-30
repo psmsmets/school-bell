@@ -4,19 +4,22 @@
 import calendar
 import os
 import re
+import requests
 import schedule
 import sys
+from datetime import date, timedelta
 from gpiozero import Buzzer
 from logging import Logger
 from threading import Thread
 from time import sleep
 
 # Relative imports
+from .openholidays import OpenHolidays, is_holiday
+from .utils import init_logger, is_raspberry_pi, system_call
 try:
     from .version import version
 except (ValueError, ModuleNotFoundError, SyntaxError):
     version = "VERSION-NOT-FOUND"
-from .utils import init_logger, is_raspberry_pi, system_call, today_is_holiday
 
 
 __all__ = ['SchoolBell']
@@ -71,7 +74,7 @@ class SchoolBell(object):
         self.device = device or None
         self.buzzer = buzz_gpio or None
         self.timeout = timeout or 10
-        self.holidays = holidays or None
+        self.openholidays = holidays or None
         self.trigger = trigger or dict()
         self.wav = wav or dict()
 
@@ -175,26 +178,79 @@ class SchoolBell(object):
             self.log.error(err)
 
     @property
+    def openholidays(self):
+        """Get the OpenHolidays object.
+        """
+        return self.__openholidays
+
+    @openholidays.setter
+    def openholidays(self, subdivisionCode: str):
+        """Set the OpenHolidays object by the subdivision code.
+        """
+        self.__openholidays = None
+        self.__holidays = list()
+        self.log.info(f"holidays = {subdivisionCode or False}")
+
+        if isinstance(subdivisionCode, str):
+            self.__openholidays = OpenHolidays(
+                countryIsoCode=subdivisionCode.split('-')[1],
+                languageIsoCode=subdivisionCode.split('-')[0],
+                subdivisionCode=subdivisionCode
+            )
+            self._request_holidays()
+            schedule.every().day.at("00:00").do(self._request_holidays)
+        else:
+            raise TypeError("holidays subdivisionCode should be of type str!")
+
+    @property
     def holidays(self):
-        """Get the holidays subdivision code.
+        """Get the list with holidays.
         """
         return self.__holidays
 
-    @holidays.setter
-    def holidays(self, subdivisionCode: str):
-        """Set the holidays subdivision code.
+    def _request_holidays(self, days: int = None, **kwargs):
+        """Internal function to request school and public holidays using the
+        OpenHolidays API.
         """
-        self.__holidays = None
-        self.log.info(f"holidays = {subdivisionCode or False}")
-        if isinstance(subdivisionCode, str):
-            self.__holidays = subdivisionCode
-
-            # todo: replace by an internal function
-            schedule.every().day.at("01:00").do(
-                today_is_holiday, subdivisionCode, self.timeout, self.log
+        startDate = date.today()
+        endDate = startDate + timedelta(days=days or 180)
+        self.log.debug(f"request holidays from {startDate} until {endDate}")
+        try:
+            self.__holidays = self.openholidays.holidays(
+                str(startDate), str(endDate),
+                timeout=self.timeout,
+                **kwargs
             )
-        else:
-            raise TypeError("holidays subdivisionCode should be of type str!")
+            self.log.debug("holiday request completed.")
+            return True
+        except requests.exceptions.RequestException as e:
+            self.log.warning(e)
+            return False
+
+    def is_holiday(self, date=None):
+        """Returns `True` if the given data is a school or public holiday.
+        """
+        date = date or str(date.today())
+        self.log.debug(f"verify if {date} is a holiday")
+
+        if not hasattr(self, '__check_date'):
+            # self.log.debug("  initiate holiday status cache attribute")
+            self.__check_date = None
+
+        if self.__check_date == date:
+            # self.log.debug("  return holiday status from cache")
+            return self.__check_date
+
+        if not self.__holidays:
+            # self.log.debug("  no holiday list found -> request")
+            if not self._request_holidays():
+                return False
+
+        # self.log.debug("  lookup in cached holiday list and store response")
+        self.__is_holiday = is_holiday(self.__holidays)
+        self.__check_date = date
+
+        return self.__is_holiday
 
     @property
     def wav(self):
@@ -348,7 +404,7 @@ class SchoolBell(object):
         """Ring the school bell
         """
 
-        if today_is_holiday(self.holidays, self.timeout, self.log):
+        if self.is_holiday():
             self.log.info("today is a holiday, no need to ring!")
             return
 
