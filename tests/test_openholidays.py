@@ -1,13 +1,14 @@
 # content of test_openholidays.py
 from datetime import date
 from school_bell.openholidays import OpenHolidays
+from school_bell.utils import to_date
 
 countryIsoCode = 'BE'
 languageIsoCode = 'NL'
 subdivisionCode = 'NL-BE'
 
-startDate = date.today().strftime("%Y-01-01")
-endDate = date.today().strftime("%Y-01-10")
+startDate = to_date(date.today().strftime("%Y-01-01"))
+endDate = to_date(date.today().strftime("%Y-01-10"))
 
 oh = OpenHolidays(countryIsoCode, languageIsoCode, subdivisionCode)
 

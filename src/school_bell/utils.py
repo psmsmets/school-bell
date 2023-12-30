@@ -70,7 +70,7 @@ def system_call(
 def to_datetime(value: str, fmt: str = None):
     """Convert a datetime string to a `datetime.datetime` object.
     """
-    return datetime.strptime(value, fmt or '%Y-%m-%d %H:%M')
+    return datetime.strptime(value, fmt or '%Y-%m-%d %H:%M:%S.%f')
 
 
 def to_date(value: str, fmt: str = None):

@@ -1,5 +1,5 @@
 # content of test_school_bell.py
-from school_bell.school_bell import SchoolBell, _validate_day, _validate_time
+from school_bell.school_bell import _validate_day, _validate_time
 
 
 def test_validate_day():
@@ -12,7 +12,7 @@ def test_validate_day():
     assert _validate_day('Sun') is True
 
 
-def test_validate_day():
+def test_validate_time():
     assert _validate_time("0:0") is True
     assert _validate_time("00:00") is True
     assert _validate_time("9:9") is True
