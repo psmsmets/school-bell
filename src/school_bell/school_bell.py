@@ -191,7 +191,9 @@ class SchoolBell(object):
         self.__holidays = list()
         self.log.info(f"holidays = {subdivisionCode or False}")
 
-        if isinstance(subdivisionCode, str):
+        if subdivisionCode is None:
+            return
+        elif isinstance(subdivisionCode, str):
             self.__openholidays = OpenHolidays(
                 countryIsoCode=subdivisionCode.split('-')[1],
                 languageIsoCode=subdivisionCode.split('-')[0],
@@ -235,6 +237,10 @@ class SchoolBell(object):
     def is_holiday(self):
         """Returns `True` if today is a school or public holiday.
         """
+
+        if self.openholidays is None:
+            return False
+
         today = datetime.date.today()
         self.log.debug(f"verify if {today} is a holiday")
 
@@ -275,7 +281,7 @@ class SchoolBell(object):
 
         self.log.info("wav =")
         for key, wav in value.items():
-            self.log.info(f"  {key}: {wav}")
+            self.log.info(f"  \"{key}\": \"{wav}\"")
             self.add_wav(key, wav)
         if not self.test:
             self.log.warning("wav audio files not not played to test "
@@ -286,12 +292,12 @@ class SchoolBell(object):
         """
         wav = os.path.expandvars(os.path.join(self.root, value))
         if not os.path.isfile(wav):
-            err = f"File '{wav}' not found!"
+            err = f"File \"{wav}\" not found!"
             self.log.error(err)
             raise FileNotFoundError(err)
         if self.test:
             if not _play(wav, True, self.device, self.log):
-                err = f"Could not play {wav}!"
+                err = f"Could not play \"{wav}\"!"
                 self.log.error(err)
                 raise RuntimeError(err)
         try:
@@ -370,7 +376,7 @@ class SchoolBell(object):
         """Play a wav given the key.
         """
         wav = self.get_wav(key)
-        self.log.info(f"play wav = {key}:{os.path.basename(wav)}")
+        self.log.info(f"play wav = \"{key}\": \"{os.path.basename(wav)}\"")
 
         success = _play(
             wav=wav,
@@ -389,7 +395,7 @@ class SchoolBell(object):
         """Play a remote wav given the host and key.
         """
         wav = self.get_remote_wav(host, key)
-        self.log.info(f"play remote wav {key}:{os.path.basename(wav)}")
+        self.log.info(f"play remote wav \"{key}\": \"{os.path.basename(wav)}\"")
 
         success = _play_remote(
             host=host,
@@ -400,7 +406,7 @@ class SchoolBell(object):
         )
 
         if not success:
-            err = f"Could not play remote wav {wav}!"
+            err = f"Could not play remote wav \"{wav}\"!"
             self.log.error(err)
             raise RuntimeError(err)
         self.log.info("Play remote completed successfully.")
@@ -415,7 +421,7 @@ class SchoolBell(object):
 
         wav = self.get_wav(key)
 
-        self.log.info(f"ring {key}={os.path.basename(wav)}!")
+        self.log.info(f"ring \"{key}\": \"{os.path.basename(wav)}\"")
 
         threads = []
         for host, root in self.trigger.items():
@@ -437,11 +443,9 @@ class SchoolBell(object):
             self.log.debug(".. buzzer on")
             self.buzzer.on()
 
-        self.log.debug(".. start threads")
         for t in threads:
             t.start()
 
-        self.log.debug(".. join threads")
         for t in threads:
             t.join()
 
@@ -472,7 +476,7 @@ class SchoolBell(object):
                 if not _validate_time(time, **kwargs):
                     continue
 
-                self.log.info(f"  ring every {day} at {time} with {key}")
+                self.log.info(f"  ring every {day} at {time} with \"{key}\"")
 
                 wav = self.get_wav(key)
 

@@ -59,7 +59,8 @@ def system_call(
 
     output, error = p.communicate()
 
-    log.debug(output.decode("utf-8"))
+    if output:
+        log.debug(output.decode("utf-8"))
 
     if p.returncode != 0:
         log.error(error.decode("utf-8"))
