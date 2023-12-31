@@ -307,19 +307,19 @@ class SchoolBell(object):
             raise Exception(err)
 
     def get_wav(self, key: str, root: str = None):
-        """Get a local wav given the key.
+        """Get a local WAVE audio file given the key.
         """
         root = self.root if root is None else root
         try:
             wav = self.wav[str(key)]
         except KeyError:
-            err = f"wav key \"{key}\" is not related to any sample!"
+            err = f"WAVE key \"{key}\" is not related to any sample!"
             self.log.error(err)
             raise KeyError(err)
         return os.path.expandvars(os.path.join(root, wav) if root else wav)
 
     def get_remote_wav(self, host: str, key: str):
-        """Get a remote wav given the host and key.
+        """Get a remote WAVE audio file given the host and key.
         """
         try:
             root = self.__trigger[str(host)]
@@ -330,7 +330,7 @@ class SchoolBell(object):
         try:
             wav = self.wav[str(key)]
         except KeyError:
-            err = f"wav key \"{key}\" is not related to any sample!"
+            err = f"WAVE key \"{key}\" is not related to any sample!"
             self.log.error(err)
             raise KeyError(err)
         return os.path.expandvars(os.path.join(root, wav))
@@ -373,7 +373,7 @@ class SchoolBell(object):
             raise Exception(err)
 
     def play(self, key: str, test: bool = False, device: str = None):
-        """Play a wav given the key.
+        """Play a WAVE audio file given the key.
         """
         wav = self.get_wav(key)
         self.log.info(f"play wav = \"{key}\": \"{os.path.basename(wav)}\"")
@@ -385,14 +385,14 @@ class SchoolBell(object):
             logger=self.log
         )
         if not success:
-            err = f"Could not play wav {wav}!"
+            err = f"Could not play WAVE audio file {wav}!"
             self.log.error(err)
             raise RuntimeError(err)
         self.log.info("Play completed successfully.")
 
     def play_remote(self, host: str, key: str, test: bool = False,
                     timeout: int = None):
-        """Play a remote wav given the host and key.
+        """Play a remote WAVE audio file given the host and key.
         """
         wav = self.get_remote_wav(host, key)
         self.log.info(f"play remote wav \"{key}\": \"{os.path.basename(wav)}\"")
@@ -406,7 +406,7 @@ class SchoolBell(object):
         )
 
         if not success:
-            err = f"Could not play remote wav \"{wav}\"!"
+            err = f"Could not play remote WAVE audio file \"{wav}\"!"
             self.log.error(err)
             raise RuntimeError(err)
         self.log.info("Play remote completed successfully.")
