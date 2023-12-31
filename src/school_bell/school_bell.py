@@ -2,12 +2,12 @@
 
 # absolute imports
 import calendar
+import datetime
 import os
 import re
 import requests
 import schedule
 import sys
-from datetime import date, timedelta
 from gpiozero import Buzzer
 from logging import Logger
 from threading import Thread
@@ -212,8 +212,8 @@ class SchoolBell(object):
         """Internal function to request school and public holidays using the
         OpenHolidays API.
         """
-        startDate = date.today()
-        endDate = startDate + timedelta(days=days or 180)
+        startDate = datetime.date.today()
+        endDate = startDate + datetime.timedelta(days=days or 180)
         self.log.debug(f"request holidays from {startDate} until {endDate}")
         try:
             self.__holidays = self.openholidays.holidays(
