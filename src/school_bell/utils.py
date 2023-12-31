@@ -70,10 +70,22 @@ def system_call(
 def to_datetime(value: str, fmt: str = None):
     """Convert a datetime string to a `datetime.datetime` object.
     """
-    return datetime.strptime(value, fmt or '%Y-%m-%d %H:%M:%S.%f')
+    if isinstance(value, datetime):
+        return value
+    elif isinstance(value, str):
+        return datetime.strptime(value, fmt or '%Y-%m-%d %H:%M:%S.%f')
+    else:
+        raise TypeError('to_datetime requires a datetime string!')
 
 
 def to_date(value: str, fmt: str = None):
     """Convert a date string to a `datetime.date` object.
     """
-    return datetime.strptime(value, fmt or '%Y-%m-%d').date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    elif isinstance(value, str):
+        return datetime.strptime(value, fmt or '%Y-%m-%d').date()
+    else:
+        raise TypeError('to_date requires a date string!')

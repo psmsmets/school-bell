@@ -15,7 +15,7 @@ from time import sleep
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
-from .utils import init_logger, is_raspberry_pi, system_call
+from .utils import init_logger, is_raspberry_pi, to_date, system_call
 try:
     from .version import version
 except (ValueError, ModuleNotFoundError, SyntaxError):
@@ -230,7 +230,7 @@ class SchoolBell(object):
     def is_holiday(self, date=None):
         """Returns `True` if the given data is a school or public holiday.
         """
-        date = date or str(date.today())
+        date = to_date(date) or datetime.date.today()
         self.log.debug(f"verify if {date} is a holiday")
 
         if not hasattr(self, '__check_date'):
