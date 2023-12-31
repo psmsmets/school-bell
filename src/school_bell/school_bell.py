@@ -15,7 +15,7 @@ from time import sleep
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
-from .utils import init_logger, is_raspberry_pi, to_date, system_call
+from .utils import init_logger, is_raspberry_pi, system_call
 try:
     from .version import version
 except (ValueError, ModuleNotFoundError, SyntaxError):
@@ -212,6 +212,8 @@ class SchoolBell(object):
         """Internal function to request school and public holidays using the
         OpenHolidays API.
         """
+        if not hasattr(self, '__holidays_last_update'):
+            self.__holidays_last_update = None
         startDate = datetime.date.today()
         endDate = startDate + datetime.timedelta(days=days or 180)
         self.log.debug(f"request holidays from {startDate} until {endDate}")
@@ -221,34 +223,37 @@ class SchoolBell(object):
                 timeout=self.timeout,
                 **kwargs
             )
-            self.log.debug("holiday request completed.")
+            self.__holidays_last_update = startDate
+            self.log.debug("holidays request completed.")
             return True
         except requests.exceptions.RequestException as e:
-            self.log.warning(e)
+            self.log.debug(f"holidays request failed. Last update on "
+                            "{self.__holidays_last_update}")
+            self.log.error(e)
             return False
 
-    def is_holiday(self, date=None):
-        """Returns `True` if the given data is a school or public holiday.
+    def is_holiday(self):
+        """Returns `True` if today is a school or public holiday.
         """
-        date = to_date(date or datetime.date.today())
-        self.log.debug(f"verify if {date} is a holiday")
+        today = datetime.date.today()
+        self.log.debug(f"verify if {today} is a holiday")
 
-        if not hasattr(self, '__check_date'):
+        if not hasattr(self, '__ref_date'):
             # self.log.debug("  initiate holiday status cache attribute")
-            self.__check_date = None
+            self.__ref_date = None
 
-        if self.__check_date == date:
+        if self.__ref_date == today:
             # self.log.debug("  return holiday status from cache")
-            return self.__check_date
+            return self.__is_holiday
 
-        if not self.__holidays:
+        if not self.holidays:
             # self.log.debug("  no holiday list found -> request")
             if not self._request_holidays():
                 return False
 
         # self.log.debug("  lookup in cached holiday list and store response")
-        self.__is_holiday = is_holiday(self.__holidays)
-        self.__check_date = date
+        self.__is_holiday = is_holiday(today, self.holidays)
+        self.__ref_date = today
 
         return self.__is_holiday
 
