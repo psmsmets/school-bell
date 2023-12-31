@@ -4,7 +4,7 @@
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, date
 from subprocess import Popen, PIPE
 
 
