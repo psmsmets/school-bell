@@ -15,6 +15,16 @@ Python scheduled ringing of the school bell
     MIT that can be found under the LICENSE file.
 """
 
+# Import main modules
+from . import utils, openholidays, main
+
+# Import SchoolBell class
+from .school_bell import SchoolBell
+
+# Make only a selection available to __all__ to not clutter the namespace
+# Maybe also to discourage the use of `from xcorr import *`.
+__all__ = ['SchoolBell', 'utils', 'openholidays', 'main']
+
 # Version
 try:
     # - Released versions just tags:       1.10.0

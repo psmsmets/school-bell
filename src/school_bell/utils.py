@@ -3,16 +3,13 @@
 # absolute imports
 import logging
 import os
-import requests
 import sys
-from datetime import date
+from datetime import datetime, date
 from subprocess import Popen, PIPE
 
-# Relative imports
-from .openholidays import OpenHolidays
 
-
-__all__ = ['init_logger', 'is_raspberry_pi', 'system_call', 'today_is_holiday']
+__all__ = ['init_logger', 'is_raspberry_pi', 'system_call',
+           'to_datetime', 'to_date']
 
 
 def init_logger(
@@ -46,37 +43,6 @@ def is_raspberry_pi():
     return model.startswith("Raspberry Pi")
 
 
-__oh = OpenHolidays()
-
-
-def today_is_holiday(
-    subdivisionCode: str, timeout=None, log: logging.Logger = None,
-    **kwargs
-):
-    """Returns `True` if the current day is either a public or school holiday.
-    Consecutive identical requests are returned from cache.
-    """
-    if not subdivisionCode:
-        return False
-
-    log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
-
-    try:
-        holiday = __oh.isHoliday(
-            date=f"{date.today()}",
-            countryIsoCode=subdivisionCode.split('-')[1],
-            languageIsoCode=subdivisionCode.split('-')[0],
-            subdivisionCode=subdivisionCode,
-            timeout=timeout,
-            **kwargs
-        )
-    except requests.exceptions.RequestException as e:
-        holiday = False
-        log.warning(e)
-
-    return holiday
-
-
 def system_call(
     command: list, log: logging.Logger = None,
     **kwargs
@@ -93,9 +59,34 @@ def system_call(
 
     output, error = p.communicate()
 
-    log.debug(output.decode("utf-8"))
+    if output:
+        log.debug(output.decode("utf-8"))
 
     if p.returncode != 0:
         log.error(error.decode("utf-8"))
 
     return p.returncode == 0
+
+
+def to_datetime(value: str, fmt: str = None):
+    """Convert a datetime string to a `datetime.datetime` object.
+    """
+    if isinstance(value, datetime):
+        return value
+    elif isinstance(value, str):
+        return datetime.strptime(value, fmt or '%Y-%m-%d %H:%M:%S.%f')
+    else:
+        raise TypeError('to_datetime requires a datetime string!')
+
+
+def to_date(value: str, fmt: str = None):
+    """Convert a date string to a `datetime.date` object.
+    """
+    if isinstance(value, date):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    elif isinstance(value, str):
+        return datetime.strptime(value, fmt or '%Y-%m-%d').date()
+    else:
+        raise TypeError('to_date requires a date string!')
