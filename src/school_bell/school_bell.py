@@ -230,7 +230,7 @@ class SchoolBell(object):
     def is_holiday(self, date=None):
         """Returns `True` if the given data is a school or public holiday.
         """
-        date = to_date(date) or datetime.date.today()
+        date = to_date(date or datetime.date.today())
         self.log.debug(f"verify if {date} is a holiday")
 
         if not hasattr(self, '__check_date'):
