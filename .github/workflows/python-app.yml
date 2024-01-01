@@ -27,8 +27,8 @@ jobs:
       run: |
         sudo apt install -y alsa-utils
         sudo usermod -a -G audio $USER
-        sudo apt reinstall pulseaudio
-        #echo "options snd-hda-intel dmic_detect=0" | sudo tee -a /etc/modprobe.d/alsa-base.conf
+        #sudo apt reinstall pulseaudio
+        echo "options snd-hda-intel dmic_detect=0" | sudo tee -a /etc/modprobe.d/alsa-base.conf
         python -m pip install --upgrade pip
         pip install flake8 pytest git+https://github.com/psmsmets/school-bell.git
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
