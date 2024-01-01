@@ -1,5 +1,26 @@
 # content of test_school_bell.py
-from school_bell.school_bell import _validate_day, _validate_time
+from os import getcwd
+from school_bell.school_bell import SchoolBell, _validate_day, _validate_time
+
+
+def create_args(holidays: str = None):
+    return {
+        'schedule': {
+            'Wed': {
+                '08:30': '0',
+                '10:30': '1'
+            }
+        },
+        'wav': {
+            '0': 'ClassBell-SoundBible.com-1426436341.wav',
+            '1': 'SchoolBell-SoundBible.com-449398625.wav'
+        },
+        'root': f"{getcwd()}/samples",
+        'test': True,
+        'timeout': 10,
+        'holidays': 'NL-BE',
+        'debug': True,
+    }
 
 
 def test_validate_day():
@@ -23,3 +44,10 @@ def test_validate_time():
     assert _validate_time("00:00:00") is True
     assert _validate_time("00:00:59") is True
     assert _validate_time("00:00:60") is False
+
+
+def test_school_bell():
+    bell = SchoolBell(**create_args())
+    assert bell.play(0) == True
+    assert bell.ring(1) != bell.is_holiday()
+    assert bell.run_schedule(_test_mode=True) is True

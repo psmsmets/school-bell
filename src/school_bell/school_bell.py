@@ -228,10 +228,10 @@ class SchoolBell(object):
             self.__holidays_last_update = startDate
             self.log.debug("holidays request completed.")
             return True
-        except requests.exceptions.RequestException as e:
-            self.log.debug(f"holidays request failed. Last update on "
-                            "{self.__holidays_last_update}")
-            self.log.error(e)
+        except requests.exceptions.RequestException as err:
+            self.log.debug("holidays request failed. Last update on {}"
+                           .format(self.__holidays_last_update))
+            self.log.error(err)
             return False
 
     def is_holiday(self):
@@ -281,7 +281,7 @@ class SchoolBell(object):
 
         self.log.info("wav =")
         for key, wav in value.items():
-            self.log.info(f"  \"{key}\": \"{wav}\"")
+            self.log.info(f"  {key}: {wav}")
             self.add_wav(key, wav)
         if not self.test:
             self.log.warning("wav audio files not not played to test "
@@ -374,9 +374,10 @@ class SchoolBell(object):
 
     def play(self, key: str, test: bool = False, device: str = None):
         """Play a WAVE audio file given the key.
+        Returns `True` on success.
         """
         wav = self.get_wav(key)
-        self.log.info(f"play wav = \"{key}\": \"{os.path.basename(wav)}\"")
+        self.log.info(f"play wav = {key}: {os.path.basename(wav)}")
 
         success = _play(
             wav=wav,
@@ -389,13 +390,15 @@ class SchoolBell(object):
             self.log.error(err)
             raise RuntimeError(err)
         self.log.info("Play completed successfully.")
+        return True
 
     def play_remote(self, host: str, key: str, test: bool = False,
                     timeout: int = None):
         """Play a remote WAVE audio file given the host and key.
+        Returns `True` on success.
         """
         wav = self.get_remote_wav(host, key)
-        self.log.info(f"play remote wav \"{key}\": \"{os.path.basename(wav)}\"")
+        self.log.info(f"play remote wav {key}: {os.path.basename(wav)}")
 
         success = _play_remote(
             host=host,
@@ -410,18 +413,20 @@ class SchoolBell(object):
             self.log.error(err)
             raise RuntimeError(err)
         self.log.info("Play remote completed successfully.")
+        return True
 
     def ring(self, key: str, **kwargs):
-        """Ring the school bell
+        """Ring the school bell.
+        Returns `True` on success.
         """
 
         if self.is_holiday():
             self.log.info("today is a holiday, no need to ring!")
-            return
+            return False
 
         wav = self.get_wav(key)
 
-        self.log.info(f"ring \"{key}\": \"{os.path.basename(wav)}\"")
+        self.log.info(f"ring {key}: {os.path.basename(wav)}")
 
         threads = []
         for host, root in self.trigger.items():
@@ -454,6 +459,7 @@ class SchoolBell(object):
             self.buzzer.off()
 
         self.log.debug(".. done")
+        return True
 
     def create_schedule(self, value: dict = None, **kwargs):
         """Create a schedule
@@ -490,13 +496,18 @@ class SchoolBell(object):
                     .format(day_name, time)
                 )
 
-    def run_schedule(self):
+    def run_schedule(self, _test_mode: bool = False):
         """
         """
-        self.log.info('Start schedule.')
-        while True:
-            schedule.run_pending()
-            sleep(.2)
+        if _test_mode:
+            self.log.info('Start schedule in test mode.')
+            schedule.run_all(delay_seconds=10)
+            return True
+        else:
+            self.log.info('Start schedule.')
+            while True:
+                schedule.run_pending()
+                sleep(.2)
 
 
 def _ssh(self, host: str, timeout: int = 10):
