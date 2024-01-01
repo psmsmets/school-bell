@@ -94,7 +94,7 @@ class SchoolBell(object):
         if self.__alsa:
             self.log.info(f"alsa device = {value}")
             try:
-                self.__device = str(value)
+                self.__device = value
             except ValueError as err:
                 self.log.error(err)
 
