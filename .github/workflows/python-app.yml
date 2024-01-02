@@ -24,17 +24,13 @@ jobs:
       with:
         python-version: "3.10"
     - name: Install dependencies
-      env:
-        SDL_VIDEODRIVER: "dummy"
-        SDL_AUDIODRIVER: "disk"
       run: |
-        #sudo apt-get update --fix-missing
-        #sudo apt-get upgrade
-        sudo apt-get install libasound2 alsa-utils alsa-oss
+        sudo apt-get update --fix-missing
+        sudo apt-get upgrade -y
+        sudo apt-get install libasound2 alsa-utils alsa-oss -y
         sudo usermod -a -G audio $USER
         #sudo apt reinstall pulseaudio
         echo "options snd-hda-intel dmic_detect=0" | sudo tee -a /etc/modprobe.d/alsa-base.conf
-        #RUN YES | sudo apt-get install libasound2 alsa-utils alsa-oss
         python -m pip install --upgrade pip
         pip install flake8 pytest git+https://github.com/psmsmets/school-bell.git
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -45,5 +41,8 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
+      env:
+        SDL_VIDEODRIVER: "dummy"
+        SDL_AUDIODRIVER: "disk"
       run: |
         pytest
