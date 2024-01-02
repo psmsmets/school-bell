@@ -16,9 +16,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    env:
-      SDL_VIDEODRIVER: "dummy"
-      SDL_AUDIODRIVER: "disk"
 
     steps:
     - uses: actions/checkout@v3
@@ -27,8 +24,13 @@ jobs:
       with:
         python-version: "3.10"
     - name: Install dependencies
+      env:
+        SDL_VIDEODRIVER: "dummy"
+        SDL_AUDIODRIVER: "disk"
       run: |
-        sudo apt install -y alsa-utils
+        sudo apt-get update --fix-missing
+        sudo apt-get upgrade
+        sudo apt-get install libasound2 alsa-utils alsa-oss
         sudo usermod -a -G audio $USER
         #sudo apt reinstall pulseaudio
         #echo "options snd-hda-intel dmic_detect=0" | sudo tee -a /etc/modprobe.d/alsa-base.conf
