@@ -150,6 +150,8 @@ Logs are handled via ``syslog``. Show all logs of today:
 Licensing
 =========
 
-The source code for school-bell is licensed under MIT that can be found under the LICENSE file.
+The source code for school-bell is open-source and licensed under MIT_.
+
+.. _MIT: https://raw.githubusercontent.com/psmsmets/school-bell/main/LICENSE
 
 Pieter Smets © 2024. All rights reserved.
