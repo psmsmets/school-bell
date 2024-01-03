@@ -29,11 +29,8 @@ jobs:
         SDL_AUDIODRIVER: "disk"
       run: |
         sudo apt-get update
-        sudo NEEDRESTART_MODE=a apt-get install pulseaudio alsa alsa-utils alsa-oss -y
+        sudo NEEDRESTART_MODE=a apt-get install alsa alsa-utils -y
         sudo usermod -a -G audio $USER
-        aplay -L
-        aplay -D null -v /usr/share/sounds/alsa/Front_Center.wav
-        aplay -D jack -v /usr/share/sounds/alsa/Front_Center.wav
         python -m pip install --upgrade pip
         pip install flake8 pytest git+https://github.com/psmsmets/school-bell.git
         #if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -48,4 +45,4 @@ jobs:
         SDL_VIDEODRIVER: "dummy"
         SDL_AUDIODRIVER: "disk"
       run: |
-        pytest
+        pytest --device null
