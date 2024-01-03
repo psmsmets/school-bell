@@ -218,7 +218,7 @@ class SchoolBell(object):
             self.__holidays_last_update = None
         startDate = datetime.date.today()
         endDate = startDate + datetime.timedelta(days=days or 180)
-        self.log.debug(f"request holidays from {startDate} until {endDate}")
+        self.log.info(f"request holidays from {startDate} until {endDate}")
         try:
             self.__holidays = self.openholidays.holidays(
                 str(startDate), str(endDate),
@@ -229,9 +229,9 @@ class SchoolBell(object):
             self.log.debug("holidays request completed.")
             return True
         except requests.exceptions.RequestException as err:
-            self.log.debug("holidays request failed. Last update on {}"
-                           .format(self.__holidays_last_update))
-            self.log.error(err)
+            self.log.warning("holidays request failed. Last update on {}"
+                             .format(self.__holidays_last_update))
+            self.log.debug(err)
             return False
 
     def is_holiday(self):
@@ -245,19 +245,19 @@ class SchoolBell(object):
         self.log.debug(f"verify if {today} is a holiday")
 
         if not hasattr(self, '__ref_date'):
-            # self.log.debug("  initiate holiday status cache attribute")
+            self.log.debug("  initiate holiday status cache attribute")
             self.__ref_date = None
 
         if self.__ref_date == today:
-            # self.log.debug("  return holiday status from cache")
+            self.log.debug("  return holiday status from cache")
             return self.__is_holiday
 
         if not self.holidays:
-            # self.log.debug("  no holiday list found -> request")
+            self.log.debug("  no holiday list found -> request")
             if not self._request_holidays():
                 return False
 
-        # self.log.debug("  lookup in cached holiday list and store response")
+        self.log.debug("  lookup holiday in cached list and store response")
         self.__is_holiday = is_holiday(today, self.holidays)
         self.__ref_date = today
 
@@ -284,7 +284,7 @@ class SchoolBell(object):
             self.log.info(f"  {key}: {wav}")
             self.add_wav(key, wav)
         if not self.test:
-            self.log.warning("wav audio files not not played to test "
+            self.log.warning("wav audio files not not actually played "
                              "(run with option --test instead)")
 
     def add_wav(self, key: str, value: str):
