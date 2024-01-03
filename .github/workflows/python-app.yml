@@ -29,7 +29,7 @@ jobs:
         SDL_AUDIODRIVER: "disk"
       run: |
         sudo apt-get update
-        sudo NEEDRESTART_MODE=a apt-get install alsa alsa-utils -y
+        sudo NEEDRESTART_MODE=a apt-get install alsa alsa-utils alsa-oss -y
         sudo usermod -a -G audio $USER
         aplay -L
         aplay -D null -v /usr/share/sounds/alsa/Front_Center.wav
