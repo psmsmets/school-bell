@@ -2,18 +2,14 @@
 School Bell
 *************************************
 
-|Maintenance yes| |MIT license| |made-with-python| |Workflow status|
+|Maintenance yes|  |MIT license|  |made-with-python|  |Workflow status|
 
 
 .. |Maintenance yes| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
-   :target: https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity
-
 .. |MIT license| image:: https://img.shields.io/badge/License-MIT-blue.svg
-   :target: https://lbesson.mit-license.org/
-
+   :target: https://raw.githubusercontent.com/psmsmets/school-bell/main/LICENSE
 .. |made-with-python| image:: https://img.shields.io/badge/Made%20with-Python-1f425f.svg
    :target: https://www.python.org/
-
 .. |Workflow status| image:: https://github.com/psmsmets/school-bell/actions/workflows/tests.yml/badge.svg
 
 Python-scheduled ringing of a school bell. 
