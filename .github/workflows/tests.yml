@@ -31,8 +31,8 @@ jobs:
           sudo apt-get install alsa alsa-utils -y
           sudo usermod -a -G audio $USER
           python -m pip install --upgrade pip
-          pip install flake8 pytest git+https://github.com/psmsmets/school-bell.git
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flake8 pytest .
+          # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
