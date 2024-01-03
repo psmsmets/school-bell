@@ -2,7 +2,7 @@
 School Bell
 *************************************
 
-|Maintenance yes|  |MIT license|  |made-with-python|  |Workflow status|
+|Maintenance yes||MIT license||made-with-python||Workflow status|
 
 
 .. |Maintenance yes| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
