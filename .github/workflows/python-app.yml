@@ -29,11 +29,10 @@ jobs:
         SDL_AUDIODRIVER: "disk"
       run: |
         sudo apt update
-        sudo apt install alsa pulseaudio -y
-        sudo apt install alsa pulseaudio alsa-utils -y
+        sudo apt install pulseaudio alsa alsa-utils alsa-oss -y
         sudo usermod -a -G audio $USER
-        echo "options snd-hda-intel dmic_detect=0" | sudo tee -a /etc/modprobe.d/alsa-base.conf
-        pulseaudio -k && sudo alsa force-reload
+        sudo systemctl restart alsa-restore.service
+        aplay -L
         python -m pip install --upgrade pip
         pip install flake8 pytest git+https://github.com/psmsmets/school-bell.git
         #if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
