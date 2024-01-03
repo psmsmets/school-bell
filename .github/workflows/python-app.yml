@@ -28,8 +28,8 @@ jobs:
         SDL_VIDEODRIVER: "dummy"
         SDL_AUDIODRIVER: "disk"
       run: |
-        sudo apt update
-        sudo apt install pulseaudio alsa alsa-utils alsa-oss -y
+        sudo apt-get update
+        sudo NEEDRESTART_MODE=a apt-get install pulseaudio alsa alsa-utils alsa-oss -y
         sudo usermod -a -G audio $USER
         sudo systemctl restart alsa-restore.service
         aplay -L
