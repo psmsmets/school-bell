@@ -69,6 +69,8 @@ class SchoolBell(object):
         self.log.info(f"version = {version}")
 
         # Init
+        self.__holidays_last_update = None
+
         self.root = root or None
         self.test = test or False
         self.device = device or None
@@ -146,7 +148,7 @@ class SchoolBell(object):
             raise FileNotFoundError(err)
 
     @property
-    def test(self):
+    def test(self) -> bool:
         """Get the test status.
         """
         return self.__test
@@ -162,7 +164,7 @@ class SchoolBell(object):
             self.log.error(err)
 
     @property
-    def timeout(self):
+    def timeout(self) -> int:
         """Get the timeout value.
         """
         return self.__timeout
@@ -189,6 +191,8 @@ class SchoolBell(object):
         """
         self.__openholidays = None
         self.__holidays = list()
+        self.__holidays_last_update = None
+        self.__ref_date = None
         self.log.info(f"holidays = {subdivisionCode or False}")
 
         if subdivisionCode is None:
@@ -205,19 +209,21 @@ class SchoolBell(object):
             raise TypeError("holidays subdivisionCode should be of type str!")
 
     @property
-    def holidays(self):
+    def holidays(self) -> list:
         """Get the list with holidays.
         """
         return self.__holidays
 
-    def _request_holidays(self, days: int = None, **kwargs):
+    def _request_holidays(self, days: int = None, **kwargs) -> bool:
         """Internal function to request school and public holidays using the
         OpenHolidays API.
         """
-        if not hasattr(self, '__holidays_last_update'):
-            self.__holidays_last_update = None
+        if not self.openholidays:
+            return
+
         startDate = datetime.date.today()
         endDate = startDate + datetime.timedelta(days=days or 180)
+
         self.log.info(f"request holidays from {startDate} until {endDate}")
         try:
             self.__holidays = self.openholidays.holidays(
@@ -234,21 +240,17 @@ class SchoolBell(object):
             self.log.debug(err)
             return False
 
-    def is_holiday(self):
-        """Returns `True` if today is a school or public holiday.
+    def is_holiday(self, date: datetime.date = None) -> bool:
+        """Returns `True` if `date` is a school or public holiday.
         """
 
         if self.openholidays is None:
-            return False
+            return
 
-        today = datetime.date.today()
-        self.log.debug(f"verify if {today} is a holiday")
+        date = date or datetime.date.today()
+        self.log.debug(f"verify if {date} is a holiday")
 
-        if not hasattr(self, '__ref_date'):
-            self.log.debug("  initiate holiday status cache attribute")
-            self.__ref_date = None
-
-        if self.__ref_date == today:
+        if self.__ref_date == date:
             self.log.debug("  return holiday status from cache")
             return self.__is_holiday
 
@@ -258,13 +260,13 @@ class SchoolBell(object):
                 return False
 
         self.log.debug("  lookup holiday in cached list and store response")
-        self.__is_holiday = is_holiday(today, self.holidays)
-        self.__ref_date = today
+        self.__is_holiday = is_holiday(date, self.holidays)
+        self.__ref_date = date
 
         return self.__is_holiday
 
     @property
-    def wav(self):
+    def wav(self) -> dict:
         """Get the wav dictionary.
         """
         return self.__wav
@@ -306,7 +308,7 @@ class SchoolBell(object):
             self.log.error(err)
             raise Exception(err)
 
-    def get_wav(self, key: str, root: str = None):
+    def get_wav(self, key: str, root: str = None) -> str:
         """Get a local WAVE audio file given the key.
         """
         root = self.root if root is None else root
@@ -318,7 +320,7 @@ class SchoolBell(object):
             raise KeyError(err)
         return os.path.expandvars(os.path.join(root, wav) if root else wav)
 
-    def get_remote_wav(self, host: str, key: str):
+    def get_remote_wav(self, host: str, key: str) -> str:
         """Get a remote WAVE audio file given the host and key.
         """
         try:
@@ -336,7 +338,7 @@ class SchoolBell(object):
         return os.path.expandvars(os.path.join(root, wav))
 
     @property
-    def trigger(self):
+    def trigger(self) -> dict:
         """Get the remote linux devices to trigger over ssh.
         """
         return self.__trigger
@@ -372,7 +374,7 @@ class SchoolBell(object):
             self.log.error(err)
             raise Exception(err)
 
-    def play(self, key: str, test: bool = False, device: str = None):
+    def play(self, key: str, test: bool = False, device: str = None) -> bool:
         """Play a WAVE audio file given the key.
         Returns `True` on success.
         """
@@ -415,7 +417,7 @@ class SchoolBell(object):
         self.log.info("Play remote completed successfully.")
         return True
 
-    def ring(self, key: str, **kwargs):
+    def ring(self, key: str, **kwargs) -> bool:
         """Ring the school bell.
         Returns `True` on success.
         """
