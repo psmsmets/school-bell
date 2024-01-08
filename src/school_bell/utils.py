@@ -23,7 +23,8 @@ def init_logger(
     # log to stdout
     streamHandler = logging.StreamHandler(sys.stdout)
     streamHandler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        # "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(levelname)s: %(message)s"
     ))
     logger.addHandler(streamHandler)
 
