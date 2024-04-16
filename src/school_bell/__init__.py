@@ -22,7 +22,6 @@ from . import utils, openholidays, main
 from .school_bell import SchoolBell
 
 # Make only a selection available to __all__ to not clutter the namespace
-# Maybe also to discourage the use of `from xcorr import *`.
 __all__ = ['SchoolBell', 'utils', 'openholidays', 'main']
 
 # Version
