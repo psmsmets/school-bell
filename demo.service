@@ -1,6 +1,7 @@
 [Unit]
 Description=Scheduled school bell
-After=multi-user.target
+Wants=network-online.target
+After=network.target network-online.target
 
 [Service]
 Type=simple
@@ -15,6 +16,7 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=school-bell
 Restart=always
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
