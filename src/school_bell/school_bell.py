@@ -12,6 +12,7 @@ from gpiozero import Buzzer
 from logging import Logger
 from threading import Thread
 from time import sleep
+from typing import List, Union
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
@@ -49,7 +50,7 @@ class SchoolBell(object):
         root: str = None,
         test: bool = None,
         device: str = None,
-        buzz_gpio: int = None,
+        buzz_gpio: Union[int, List[int]] = None,
         timeout: int = None,
         holidays: str = None,
         trigger: dict = None,
@@ -74,7 +75,7 @@ class SchoolBell(object):
         self.root = root or None
         self.test = test or False
         self.device = device or None
-        self.buzzer = buzz_gpio or None
+        self.buzzer = buzz_gpio
         self.timeout = timeout or 10
         self.openholidays = holidays or None
         self.trigger = trigger or dict()
@@ -107,20 +108,36 @@ class SchoolBell(object):
         return self.__buzzer
 
     @buzzer.setter
-    def buzzer(self, gpio_pin: int):
-        self.log.info(f"buzzer = {gpio_pin or False}")
-        self.__buzzer = False
-        if isinstance(gpio_pin, int):
-            if is_raspberry_pi():
-                try:
-                    self.__buzzer = Buzzer(gpio_pin)
-                    self.log.debug(f"  {self.__buzzer}")
-                except Exception as err:
-                    self.log.error(err)
-                    raise Exception(err)
-            else:
-                self.log.warning("Host is not a Raspberry Pi:"
-                                 " buzzer disabled!")
+    def buzzer(self, gpio_pins: Union[int, List[int]]):
+        self.log.info(f"buzzer = {gpio_pins or False}")
+
+        if gpio_pins is None:
+            gpio_pins = []
+        elif isinstance(gpio_pins, int) and not isinstance(gpio_pins, bool):
+            gpio_pins = [gpio_pins]
+        elif not (
+            isinstance(gpio_pins, list) and
+            all(isinstance(pin, int) and not isinstance(pin, bool)
+                for pin in gpio_pins)
+        ):
+            raise TypeError(
+                "buzz_gpio should be an integer or a list of integers!"
+            )
+
+        self.__buzzer = []
+        if not gpio_pins:
+            return
+
+        if is_raspberry_pi():
+            try:
+                self.__buzzer = [Buzzer(pin) for pin in gpio_pins]
+                for buzzer in self.__buzzer:
+                    self.log.debug(f"  {buzzer}")
+            except Exception as err:
+                self.log.error(err)
+                raise Exception(err)
+        else:
+            self.log.warning("Host is not a Raspberry Pi: buzzer disabled!")
 
     @property
     def log(self):
@@ -448,7 +465,8 @@ class SchoolBell(object):
 
         if self.buzzer:
             self.log.debug(".. buzzer on")
-            self.buzzer.on()
+            for buzzer in self.buzzer:
+                buzzer.on()
 
         for t in threads:
             t.start()
@@ -458,7 +476,8 @@ class SchoolBell(object):
 
         if self.buzzer:
             self.log.debug(".. buzzer off")
-            self.buzzer.off()
+            for buzzer in self.buzzer:
+                buzzer.off()
 
         self.log.debug(".. done")
         return True

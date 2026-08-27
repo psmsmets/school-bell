@@ -89,6 +89,18 @@ Configuration (JSON)
         "timeout": 10
     }
 
+The optional ``buzz_gpio`` setting activates a relay while the bell audio is
+playing. It accepts a single GPIO pin for backwards compatibility, or a list
+of GPIO pins to switch multiple relays simultaneously:
+
+.. code-block:: JSON
+
+    {"buzz_gpio": 17}
+
+.. code-block:: JSON
+
+    {"buzz_gpio": [17, 27]}
+
 The remote trigger requires an ``ssh-key`` to connect to the remote host!
 
 Generate a new ``ssh-key`` named ``school-bell`` in ``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname ``pibell2``
