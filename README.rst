@@ -22,7 +22,7 @@ Check the `Live Status`_ of the online service.
 Setup
 =====
 
-See the guide_ how to configure a Raspberry Pi and Python 3.9 virtual environment from scratch.
+See the guide_ how to configure a Raspberry Pi and Python 3.13 virtual environment from scratch.
 
 .. _guide: docs/GUIDE.rst
 

@@ -64,7 +64,6 @@ Install Python core packages (apt)
 .. code-block:: sh
 
     sudo apt update
-    sudo apt install -y libatlas-base-dev
     sudo apt install -y build-essential libssl-dev libffi-dev
     sudo apt install -y python3 python3-pip python3-dev python3-venv python3-setuptools
     sudo apt install -y python3-numpy python3-gpiozero python3-serial
