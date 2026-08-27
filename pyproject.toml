@@ -65,3 +65,8 @@ where = ["src"]
 [tool.setuptools_scm]
 write_to = "src/school_bell/version.py"
 git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
