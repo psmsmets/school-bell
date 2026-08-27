@@ -173,4 +173,4 @@ The source code for school-bell is open-source and licensed under MIT_.
 
 .. _MIT: https://raw.githubusercontent.com/psmsmets/school-bell/main/LICENSE
 
-Pieter Smets © 2024. All rights reserved.
+Pieter Smets © 2022 - 2026. All rights reserved.
