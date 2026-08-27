@@ -1,10 +1,66 @@
 [build-system]
 requires = [
-    "setuptools>=45",
-    "setuptools_scm>=6.2",
-    "wheel",
+    "setuptools>=61",
+    "setuptools-scm>=8",
 ]
-build-backend = 'setuptools.build_meta'
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "school-bell"
+dynamic = ["version"]
+description = "Python scheduled ringing of the school bell"
+readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Pieter Smets", email = "mail@pietersmets.be" },
+]
+maintainers = [
+    { name = "Pieter Smets", email = "mail@pietersmets.be" },
+]
+keywords = ["unix", "automation", "bell", "gpio"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Education",
+]
+dependencies = [
+    "gpiozero>=1.6",
+    "requests>=2.20",
+    "schedule>=1.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/psmsmets/school-bell"
+Source = "https://github.com/psmsmets/school-bell"
+Tracker = "https://github.com/psmsmets/school-bell/issues"
+
+[project.scripts]
+school-bell = "school_bell.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.exclude-package-data]
+"*" = [".DS_Store", ".ipynb_checkpoints/*", "__pycache__/*", "*.py[cod]"]
+
+[tool.setuptools.data-files]
+"share/school-bell" = ["demo.json", "demo.service"]
 
 [tool.setuptools_scm]
 write_to = "src/school_bell/version.py"
