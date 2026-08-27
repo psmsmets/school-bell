@@ -21,7 +21,7 @@ def create_args(device):
         'device': device,
         'test': True,
         'timeout': 10,
-        'holidays': 'NL-BE',
+        'holidays': 'BE-NL',
         'debug': True,
     }
 

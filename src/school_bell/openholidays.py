@@ -17,12 +17,13 @@ class OpenHolidays(object):
     """
 
     def __init__(self, countryIsoCode: str = None, languageIsoCode: str = None,
-                 subdivisionCode: str = None):
+                 subdivisionCode: str = None, groupCode: str = None):
         """Initialize the Open Holidays API object
         """
         self.__countryIsoCode = countryIsoCode
         self.__languageIsoCode = languageIsoCode
         self.__subdivisionCode = subdivisionCode
+        self.__groupCode = groupCode
         self.__swagger = self._get("swagger/v1/swagger.json")
         self.__is_holiday_request = None
         self.__is_holiday = False
@@ -44,6 +45,12 @@ class OpenHolidays(object):
         """Returns the class subdivisionCode.
         """
         return self.__subdivisionCode
+
+    @property
+    def groupCode(self):
+        """Returns the class groupCode.
+        """
+        return self.__groupCode
 
     @property
     def _swagger(self):
@@ -96,7 +103,8 @@ class OpenHolidays(object):
 
     def publicHolidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, groupCode: str = None,
+        **kwargs
     ) -> list:
         """Returns a list of public holidays for a given country
 
@@ -129,7 +137,13 @@ class OpenHolidays(object):
             Code of the subdivision or empty.
             Defaults to the class subdivisionCode.
 
-            _Example_: NL-BE
+            _Example_:
+
+        groupCode : `str`, optional
+            Code of a holiday group or empty.
+            Defaults to the class groupCode.
+
+            _Example_: BE-NL
 
         **kwargs :
             Parameters passed to :func:`requests.get`.
@@ -139,7 +153,8 @@ class OpenHolidays(object):
             languageIsoCode=languageIsoCode or self.languageIsoCode,
             validFrom=str(validFrom),
             validTo=str(validTo or validFrom),
-            subdivisionCode=subdivisionCode or self.subdivisionCode
+            subdivisionCode=subdivisionCode or self.subdivisionCode,
+            groupCode=groupCode or self.groupCode
         )
         return self._get('PublicHolidays', args, **kwargs)
 
@@ -171,7 +186,8 @@ class OpenHolidays(object):
 
     def schoolHolidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, groupCode: str = None,
+        **kwargs
     ) -> list:
         """Returns a list of school holidays for a given country
 
@@ -204,7 +220,13 @@ class OpenHolidays(object):
             Code of the subdivision or empty.
             Defaults to the class subdivisionCode.
 
-            _Example_: NL-BE
+            _Example_:
+
+        groupCode : `str`, optional
+            Code of a holiday group or empty.
+            Defaults to the class groupCode.
+
+            _Example_: BE-NL
 
         **kwargs :
             Parameters passed to :func:`requests.get`.
@@ -214,7 +236,8 @@ class OpenHolidays(object):
             languageIsoCode=languageIsoCode or self.languageIsoCode,
             validFrom=str(validFrom),
             validTo=str(validTo or validFrom),
-            subdivisionCode=subdivisionCode or self.subdivisionCode
+            subdivisionCode=subdivisionCode or self.subdivisionCode,
+            groupCode=groupCode or self.groupCode
         )
         return self._get('SchoolHolidays', args, **kwargs)
 
@@ -246,7 +269,8 @@ class OpenHolidays(object):
 
     def holidays(
         self, validFrom: str, validTo: str = None, countryIsoCode: str = None,
-        languageIsoCode: str = None, subdivisionCode: str = None, **kwargs
+        languageIsoCode: str = None, subdivisionCode: str = None, groupCode: str = None,
+        **kwargs
     ) -> list:
         """Returns a list of public and school holidays for a given country
 
@@ -279,7 +303,13 @@ class OpenHolidays(object):
             Code of the subdivision or empty.
             Defaults to the class subdivisionCode.
 
-            _Example_: NL-BE
+            _Example_:
+
+        groupCode : `str`, optional
+            Code of a holiday group or empty.
+            Defaults to the class groupCode.
+
+            _Example_: BE-NL
 
         **kwargs :
             Parameters passed to :func:`requests.get`.
@@ -289,7 +319,8 @@ class OpenHolidays(object):
             languageIsoCode=languageIsoCode or self.languageIsoCode,
             validFrom=str(validFrom),
             validTo=str(validTo or validFrom),
-            subdivisionCode=subdivisionCode or self.subdivisionCode
+            subdivisionCode=subdivisionCode or self.subdivisionCode,
+            groupCode=groupCode or self.groupCode
         )
         return (
             self._get('SchoolHolidays', args, **kwargs) +
@@ -400,7 +431,7 @@ class OpenHolidays(object):
     def isHoliday(
         self, date: str, countryIsoCode: str = None,
         languageIsoCode: str = None, subdivisionCode: str = None,
-        **kwargs
+        groupCode: str = None, **kwargs
     ) -> list:
         """Returns True if the date is either a public or school holiday.
         Returns False for any input error or a timeout.
@@ -428,7 +459,13 @@ class OpenHolidays(object):
             Code of the subdivision or empty.
             Defaults to the class subdivisionCode.
 
-            _Example_: NL-BE
+            _Example_:
+
+        groupCode : `str`, optional
+            Code of a holiday group or empty.
+            Defaults to the class groupCode.
+
+            _Example_: BE-NL
 
         **kwargs :
             Parameters passed to :func:`requests.get`.
@@ -439,6 +476,7 @@ class OpenHolidays(object):
             countryIsoCode=countryIsoCode or self.countryIsoCode,
             languageIsoCode=languageIsoCode or self.languageIsoCode,
             subdivisionCode=subdivisionCode or self.subdivisionCode,
+            groupCode=groupCode or self.groupCode,
             **kwargs
         )
 

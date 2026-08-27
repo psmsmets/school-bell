@@ -5,12 +5,13 @@ from school_bell.utils import to_date
 
 countryIsoCode = 'BE'
 languageIsoCode = 'NL'
-subdivisionCode = 'NL-BE'
+subdivisionCode = None
+groupCode = 'BE-NL'
 
 startDate = to_date(date.today().strftime("%Y-01-01"))
 endDate = to_date(date.today().strftime("%Y-01-10"))
 
-oh = OpenHolidays(countryIsoCode, languageIsoCode, subdivisionCode)
+oh = OpenHolidays(countryIsoCode, languageIsoCode, subdivisionCode, groupCode)
 
 
 def test_countryIsoCode():
@@ -23,6 +24,10 @@ def test_languageIsoCode():
 
 def test_subdivisionCode():
     assert oh.subdivisionCode == subdivisionCode
+
+
+def test_groupCode():
+    assert oh.groupCode == groupCode
 
 
 def test_url():
@@ -46,7 +51,7 @@ def test_isHoliday_true():
     assert oh.isHoliday(startDate) is True
 
 
-def test_isHoliday():
+def test_isHoliday_false():
     assert oh.isHoliday(endDate) is False
 
 
