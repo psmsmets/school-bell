@@ -186,27 +186,27 @@ class SchoolBell(object):
         return self.__openholidays
 
     @openholidays.setter
-    def openholidays(self, subdivisionCode: str):
-        """Set the OpenHolidays object by the subdivision code.
+    def openholidays(self, groupCode: str):
+        """Set the OpenHolidays object by the holiday group code.
         """
         self.__openholidays = None
         self.__holidays = list()
         self.__holidays_last_update = None
         self.__ref_date = None
-        self.log.info(f"holidays = {subdivisionCode or False}")
+        self.log.info(f"holidays = {groupCode or False}")
 
-        if subdivisionCode is None:
+        if groupCode is None:
             return
-        elif isinstance(subdivisionCode, str):
+        elif isinstance(groupCode, str):
             self.__openholidays = OpenHolidays(
-                countryIsoCode=subdivisionCode.split('-')[1],
-                languageIsoCode=subdivisionCode.split('-')[0],
-                subdivisionCode=subdivisionCode
+                countryIsoCode=groupCode.split('-')[0],
+                languageIsoCode=groupCode.split('-')[1],
+                groupCode=groupCode
             )
             self._request_holidays()
             schedule.every().day.at("00:00").do(self._request_holidays)
         else:
-            raise TypeError("holidays subdivisionCode should be of type str!")
+            raise TypeError("holidays groupCode should be of type str!")
 
     @property
     def holidays(self) -> list:

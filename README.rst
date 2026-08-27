@@ -85,9 +85,16 @@ Configuration (JSON)
         },
         "root": "${HOME}/samples",
         "device": "Headphones",
-        "holidays": "NL-BE",
+        "holidays": "BE-NL",
         "timeout": 10
     }
+
+The optional ``holidays`` setting accepts an `OpenHolidays group code`_.
+For example, ``BE-NL`` selects the Dutch-language school-holiday group in
+Belgium. When configured, ringing is disabled during public and school
+holidays returned for that group.
+
+.. _OpenHolidays group code: https://www.openholidaysapi.org/en/api/
 
 The remote trigger requires an ``ssh-key`` to connect to the remote host!
 
