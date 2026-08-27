@@ -70,3 +70,29 @@ local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.flake8]
+max-line-length = 127
+max-complexity = 10
+hang-closing = true
+ignore = [
+    "E121",
+    "E123",
+    "E126",
+    "E133",
+    "E24",
+    "E226",
+    "E402",
+    "E704",
+    "W503",
+    "W504",
+    "W605",
+]
+exclude = [
+    "*.egg-info",
+    ".DS_Store",
+    ".eggs",
+    "*.swp",
+    "build",
+    "migrations",
+]
