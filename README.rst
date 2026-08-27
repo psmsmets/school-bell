@@ -89,6 +89,18 @@ Configuration (JSON)
         "timeout": 10
     }
 
+The optional ``buzz_gpio`` setting activates a relay while the bell audio is
+playing. It accepts a single GPIO pin for backwards compatibility, or a list
+of GPIO pins to switch multiple relays simultaneously:
+
+.. code-block:: JSON
+
+    {"buzz_gpio": 17}
+
+.. code-block:: JSON
+
+    {"buzz_gpio": [17, 27]}
+
 The optional ``holidays`` setting accepts an `OpenHolidays group code`_.
 For example, ``BE-NL`` selects the Dutch-language school-holiday group in
 Belgium. When configured, ringing is disabled during public and school
