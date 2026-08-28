@@ -99,13 +99,28 @@ of GPIO pins to switch multiple relays simultaneously:
 
 .. code-block:: JSON
 
-    {"buzz_gpio": [26, 20, 21]}
+    {
+        "buzz_gpio": [26, 20, 21],
+        "buzz_active_high": false
+    }
 
 These are the BCM GPIO numbers for channels 1, 2 and 3 of the
 `Waveshare RPi Relay Board`_. The corresponding labels printed on the board
 are P25, P28 and P29; those labels use wiringPi numbering rather than BCM
 numbering. See `Raspberry Pi GPIO Pinout`_ for an overview of the physical and
 BCM pin numbering.
+
+The Waveshare board uses active-low relay inputs, so set
+``buzz_active_high`` to ``false``. School Bell then drives the GPIO high while
+idle and low only while ringing. Other relay boards can retain the default
+``true`` value when they use active-high inputs. Outputs are initialized and
+returned to their logical inactive state.
+
+For fail-safe wiring, connect the bell circuit through the relay's ``COM`` and
+``NO`` (normally open) contacts. Software polarity cannot prevent ringing on
+power loss when the circuit uses the normally closed contact or when external
+hardware pulls an unpowered input into its active state. Verify the actual
+contacts with the bell disconnected before deployment.
 
 .. _Waveshare RPi Relay Board: https://www.waveshare.com/wiki/RPi_Relay_Board
 .. _Raspberry Pi GPIO Pinout: https://pinout.xyz/
