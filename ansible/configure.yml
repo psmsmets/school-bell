@@ -1,0 +1,77 @@
+---
+- name: Deploy School Bell configuration
+  hosts: all
+  vars:
+    school_bell_user: pi
+    school_bell_config_name: schema.json
+
+  pre_tasks:
+    - name: Require an explicit configuration source
+      ansible.builtin.assert:
+        that:
+          - school_bell_config_src is defined
+          - school_bell_config_src | default('') | length > 0
+        fail_msg: >-
+          Set school_bell_config_src to the controller-side JSON file that
+          should be deployed.
+
+    - name: Validate configuration JSON on controller
+      ansible.builtin.assert:
+        that:
+          - >-
+            (lookup('ansible.builtin.file', school_bell_config_src) |
+             from_json) is mapping
+        fail_msg: >-
+          Configuration {{ school_bell_config_src }} must contain a valid JSON
+          object.
+
+    - name: Read School Bell user account
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ school_bell_user }}"
+
+    - name: Determine School Bell primary group
+      ansible.builtin.command:
+        argv:
+          - id
+          - -gn
+          - "{{ school_bell_user }}"
+      register: school_bell_primary_group
+      changed_when: false
+
+    - name: Determine School Bell paths
+      ansible.builtin.set_fact:
+        school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
+        school_bell_group: "{{ school_bell_primary_group.stdout }}"
+        school_bell_config_path: >-
+          {{ ansible_facts.getent_passwd[school_bell_user][4] }}/{{ school_bell_config_name }}
+
+  tasks:
+    - name: Deploy School Bell configuration
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_config_src }}"
+        dest: "{{ school_bell_config_path }}"
+        owner: "{{ school_bell_user }}"
+        group: "{{ school_bell_group }}"
+        mode: "0644"
+        backup: true
+      notify: Restart School Bell
+
+    - name: Verify deployed School Bell configuration
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+      register: school_bell_config
+
+    - name: Require deployed School Bell configuration
+      ansible.builtin.assert:
+        that: school_bell_config.stat.isreg | default(false)
+        fail_msg: >-
+          Configuration {{ school_bell_config_path }} could not be deployed.
+
+  handlers:
+    - name: Restart School Bell
+      become: true
+      ansible.builtin.systemd_service:
+        name: school-bell
+        state: restarted
