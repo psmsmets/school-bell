@@ -1,0 +1,129 @@
+---
+- name: Initialize Raspberry Pi for School Bell
+  hosts: all
+  vars:
+    school_bell_user: pi
+
+  pre_tasks:
+    - name: Read School Bell user account
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ school_bell_user }}"
+
+    - name: Determine School Bell home directory
+      ansible.builtin.set_fact:
+        school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
+
+  tasks:
+    - name: Upgrade existing packages
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Install core packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - git
+          - wget
+          - vim
+          - build-essential
+          - checkinstall
+        state: present
+
+    - name: Configure vim
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.blockinfile:
+        path: "{{ school_bell_home }}/.vimrc"
+        block: |
+          filetype plugin indent off
+          syntax on
+          set term=builtin_xterm
+          set term=xterm-256color
+          set number
+          set mouse=r
+        create: true
+        mode: "0644"
+
+    - name: Set GPU memory split
+      become: true
+      ansible.builtin.command:
+        argv:
+          - raspi-config
+          - nonint
+          - do_memory_split
+          - "16"
+      changed_when: false
+
+    - name: Expand root filesystem
+      become: true
+      ansible.builtin.command:
+        argv:
+          - raspi-config
+          - --expand-rootfs
+      register: expand_rootfs
+      changed_when: "'already' not in expand_rootfs.stdout | lower"
+
+    - name: Install Python core packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - libssl-dev
+          - libffi-dev
+          - python3
+          - python3-pip
+          - python3-dev
+          - python3-venv
+          - python3-setuptools
+          - python3-numpy
+          - python3-gpiozero
+          - python3-serial
+        state: present
+
+    - name: Create Python virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -m
+          - venv
+          - --prompt
+          - py3
+          - "{{ school_bell_home }}/.local"
+        creates: "{{ school_bell_home }}/.local/bin/python"
+
+    - name: Upgrade packaging tools in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.pip:
+        name:
+          - pip
+          - setuptools
+          - setuptools_scm
+          - wheel
+        state: latest
+        virtualenv: "{{ school_bell_home }}/.local"
+
+    - name: Add aliases and Python venv activation to bashrc
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.blockinfile:
+        path: "{{ school_bell_home }}/.bashrc"
+        block: |
+          # aliases
+          alias ls='ls -h --color=auto'
+          alias ll='ls -lh'
+          alias la='ls -lha'
+          # activate Python venv
+          source "$HOME/.local/bin/activate"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+
+    - name: Reboot Raspberry Pi
+      become: true
+      ansible.builtin.reboot:
+        msg: Rebooting machine in 5 seconds
+        reboot_timeout: 90

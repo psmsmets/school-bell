@@ -1,0 +1,21 @@
+[Unit]
+Description=Scheduled school bell
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+Type=simple
+User={{ school_bell_user }}
+Group={{ school_bell_group }}
+WorkingDirectory={{ school_bell_home }}
+Environment="VIRTUAL_ENV={{ school_bell_home }}/.local"
+Environment="PATH={{ school_bell_home }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart={{ school_bell_home }}/.local/bin/school-bell {{ school_bell_config_path }}{{ ' --debug' if school_bell_debug | bool else '' }}{{ ' --test' if school_bell_test | bool else '' }}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=school-bell
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

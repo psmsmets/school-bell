@@ -1,0 +1,34 @@
+---
+- name: Update School Bell
+  hosts: all
+  vars:
+    school_bell_user: pi
+    school_bell_repository: https://github.com/psmsmets/school-bell.git
+    school_bell_version: main
+
+  pre_tasks:
+    - name: Read School Bell user account
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ school_bell_user }}"
+
+    - name: Determine School Bell home directory
+      ansible.builtin.set_fact:
+        school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
+
+  tasks:
+    - name: Update School Bell in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.pip:
+        name: "git+{{ school_bell_repository }}@{{ school_bell_version }}"
+        state: latest
+        virtualenv: "{{ school_bell_home }}/.local"
+      notify: Restart School Bell
+
+  handlers:
+    - name: Restart School Bell
+      become: true
+      ansible.builtin.systemd_service:
+        name: school-bell
+        state: restarted

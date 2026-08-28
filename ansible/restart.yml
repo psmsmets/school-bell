@@ -1,0 +1,11 @@
+---
+- name: Restart School Bell
+  hosts: all
+
+  tasks:
+    - name: Restart and enable School Bell
+      become: true
+      ansible.builtin.systemd_service:
+        name: school-bell
+        state: restarted
+        enabled: true
