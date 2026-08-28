@@ -157,11 +157,13 @@ def main():
     obj = SchoolBell(**args.config)
 
     # play a test file or run the schedule
-    if args.play:
-        obj.play(args.play)
-        raise SystemExit()
-    else:
-        obj.run_schedule()
+    try:
+        if args.play:
+            obj.play(args.play)
+        else:
+            obj.run_schedule()
+    finally:
+        obj.close()
 
 
 if __name__ == "__main__":
