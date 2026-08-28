@@ -11,6 +11,18 @@ ansible-playbook -i inventory ansible/init.yml
 ansible-playbook -i inventory ansible/install.yml
 ```
 
+Install a specific Git branch, tag, or commit with `school_bell_version`:
+
+```sh
+ansible-playbook -i inventory ansible/install.yml \
+  -e school_bell_version=33-install-a-supported-gpiozero-pin-factory
+ansible-playbook -i inventory ansible/update.yml \
+  -e school_bell_version=fec149b
+```
+
+The selected branch, tag, or commit must already be available in the remote
+repository. Using an exact commit makes a test deployment reproducible.
+
 The install playbook copies the included demo schedule to `/home/pi/schema.json`,
 uploads the audio files from the repository's `samples/` directory to
 `/home/pi/samples/`, and configures systemd to run
