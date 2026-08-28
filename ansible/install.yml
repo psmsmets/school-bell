@@ -51,6 +51,16 @@
         that: school_bell_venv.stat.executable | default(false)
         fail_msg: Run ansible/init.yml for this host before installing School Bell.
 
+    - name: Install lgpio backend in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.pip:
+        name:
+          - "lgpio>=0.2.2.0; python_version < '3.13'"
+          - "adafruit-lgpio>=0.2.2.0; python_version >= '3.13'"
+        state: present
+        virtualenv: "{{ school_bell_home }}/.local"
+
     - name: Install School Bell in virtual environment
       become: true
       become_user: "{{ school_bell_user }}"
@@ -59,6 +69,16 @@
         state: present
         virtualenv: "{{ school_bell_home }}/.local"
       notify: Restart School Bell
+
+    - name: Verify lgpio backend in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.command:
+        argv:
+          - "{{ school_bell_home }}/.local/bin/python"
+          - -c
+          - import lgpio
+      changed_when: false
 
     - name: Install demo audio samples
       become: true
