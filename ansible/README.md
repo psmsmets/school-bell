@@ -11,9 +11,11 @@ ansible-playbook -i inventory ansible/init.yml
 ansible-playbook -i inventory ansible/install.yml
 ```
 
-The install playbook copies the included demo schedule to `/home/pi/schema.json`
-and configures systemd to run `school-bell /home/pi/schema.json`. Supply another
-controller-side JSON file with `-e school_bell_config_src=path/to/schema.json`.
+The install playbook copies the included demo schedule to `/home/pi/schema.json`,
+uploads the audio files from the repository's `samples/` directory to
+`/home/pi/samples/`, and configures systemd to run
+`school-bell /home/pi/schema.json`. Supply another controller-side JSON file
+with `-e school_bell_config_src=path/to/schema.json`.
 
 Enable startup diagnostics independently or together:
 

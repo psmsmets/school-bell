@@ -99,7 +99,16 @@ of GPIO pins to switch multiple relays simultaneously:
 
 .. code-block:: JSON
 
-    {"buzz_gpio": [17, 27]}
+    {"buzz_gpio": [26, 20, 21]}
+
+These are the BCM GPIO numbers for channels 1, 2 and 3 of the
+`Waveshare RPi Relay Board`_. The corresponding labels printed on the board
+are P25, P28 and P29; those labels use wiringPi numbering rather than BCM
+numbering. See `Raspberry Pi GPIO Pinout`_ for an overview of the physical and
+BCM pin numbering.
+
+.. _Waveshare RPi Relay Board: https://www.waveshare.com/wiki/RPi_Relay_Board
+.. _Raspberry Pi GPIO Pinout: https://pinout.xyz/
 
 The optional ``holidays`` setting accepts an `OpenHolidays group code`_.
 For example, ``BE-NL`` selects the Dutch-language school-holiday group in

@@ -60,6 +60,17 @@
         virtualenv: "{{ school_bell_home }}/.local"
       notify: Restart School Bell
 
+    - name: Install demo audio samples
+      become: true
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../samples/"
+        dest: "{{ school_bell_home }}/samples/"
+        owner: "{{ school_bell_user }}"
+        group: "{{ school_bell_group }}"
+        mode: "0644"
+        directory_mode: "0755"
+      notify: Restart School Bell
+
     - name: Install School Bell configuration
       become: true
       ansible.builtin.copy:
