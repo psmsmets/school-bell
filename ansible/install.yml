@@ -7,6 +7,7 @@
     school_bell_version: main
     school_bell_config_name: schema.json
     school_bell_config_src: files/schema.json
+    school_bell_config_overwrite: false
     school_bell_debug: false
     school_bell_test: false
 
@@ -91,7 +92,25 @@
         directory_mode: "0755"
       notify: Restart School Bell
 
-    - name: Install School Bell configuration
+    - name: Check for existing School Bell configuration
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+      register: school_bell_existing_config
+
+    - name: Validate School Bell configuration JSON on controller
+      ansible.builtin.assert:
+        that:
+          - >-
+            (lookup('ansible.builtin.file', school_bell_config_src) |
+             from_json) is mapping
+        fail_msg: >-
+          Configuration {{ school_bell_config_src }} must contain a valid JSON
+          object.
+      when: >-
+        not school_bell_existing_config.stat.exists | default(false) or
+        school_bell_config_overwrite | bool
+
+    - name: Install School Bell configuration when absent or explicitly requested
       become: true
       ansible.builtin.copy:
         src: "{{ school_bell_config_src }}"
@@ -99,6 +118,10 @@
         owner: "{{ school_bell_user }}"
         group: "{{ school_bell_group }}"
         mode: "0644"
+        backup: "{{ school_bell_config_overwrite | bool }}"
+      when: >-
+        not school_bell_existing_config.stat.exists | default(false) or
+        school_bell_config_overwrite | bool
       notify: Restart School Bell
 
     - name: Check School Bell configuration

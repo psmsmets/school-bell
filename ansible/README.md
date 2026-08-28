@@ -23,11 +23,53 @@ ansible-playbook -i inventory ansible/update.yml \
 The selected branch, tag, or commit must already be available in the remote
 repository. Using an exact commit makes a test deployment reproducible.
 
-The install playbook copies the included demo schedule to `/home/pi/schema.json`,
-uploads the audio files from the repository's `samples/` directory to
-`/home/pi/samples/`, and configures systemd to run
-`school-bell /home/pi/schema.json`. Supply another controller-side JSON file
-with `-e school_bell_config_src=path/to/schema.json`.
+On a fresh installation, the install playbook copies the included demo schedule
+to `/home/pi/schema.json`. An existing configuration is always preserved by
+default. The playbook also uploads the audio files from the repository's
+`samples/` directory to `/home/pi/samples/` and configures systemd to run
+`school-bell /home/pi/schema.json`.
+
+To replace the configuration intentionally, supply a controller-side JSON file
+and explicitly enable overwriting:
+
+```sh
+ansible-playbook -i inventory ansible/install.yml \
+  -e school_bell_config_src=path/to/schema.json \
+  -e school_bell_config_overwrite=true
+```
+
+Ansible creates a backup of the previous configuration when overwriting it.
+The update playbook never changes `schema.json`.
+
+Deploy the application version and a device-specific configuration together in
+one install run:
+
+```sh
+ansible-playbook -i inventory ansible/install.yml \
+  --limit pibell-vito-01 \
+  -e school_bell_version=35-preserve-existing-schema \
+  -e school_bell_config_src=/absolute/path/schema-vito.json \
+  -e school_bell_config_overwrite=true
+```
+
+The install playbook validates the selected file as a JSON object before it is
+copied. Omit `school_bell_config_overwrite=true` to preserve an existing
+configuration.
+
+For regular schedule changes, use the dedicated configuration playbook. It
+requires an explicit JSON file, validates it on the controller, creates a
+backup on the Raspberry Pi, and restarts School Bell only when the deployed
+content changed:
+
+```sh
+ansible-playbook -i inventory ansible/configure.yml \
+  --limit pibell-vito-01 \
+  -e school_bell_config_src=/absolute/path/schema-vito.json
+```
+
+Use `--limit` to avoid deploying a device-specific schedule to unintended
+inventory hosts. The configuration playbook defaults to `/home/pi/schema.json`;
+`school_bell_user` and `school_bell_config_name` remain configurable.
 
 School Bell installs `lgpio` as its gpiozero pin factory on Raspberry Pi. For
 Python 3.13 and newer it uses the compatible `adafruit-lgpio` distribution,
@@ -57,5 +99,7 @@ Variables can be set in inventory/group variables or with `-e`:
 - `school_bell_version`: Git branch, tag, or commit; defaults to `main`.
 - `school_bell_config_src`: controller-side configuration; defaults to the demo.
 - `school_bell_config_name`: target filename; defaults to `schema.json`.
+- `school_bell_config_overwrite`: explicitly replace and back up an existing
+  configuration; defaults to `false`.
 - `school_bell_debug`: add `--debug` to `ExecStart`; defaults to `false`.
 - `school_bell_test`: add `--test` to `ExecStart`; defaults to `false`.
