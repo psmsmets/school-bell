@@ -57,8 +57,8 @@ Type ``school-bell --help`` for the usage.
       --debug               Make the operation a lot more talkative
       --demo-config         Print the demo JSON configuration and exit
       --demo-service        Print the demo systemctl service for the current user and exit
-      --test                Play one second samples of each WAVE audio file from
-                            the JSON configuration at startup (default: False)
+      --test                Test each configured GPIO pin and play one second of
+                            each WAVE audio file at startup (default: False)
       --update [..]         Update school-bell from git. Optionally set the branch (default: main)
       --version             Print the version and exit
 
@@ -109,6 +109,17 @@ BCM pin numbering.
 
 .. _Waveshare RPi Relay Board: https://www.waveshare.com/wiki/RPi_Relay_Board
 .. _Raspberry Pi GPIO Pinout: https://pinout.xyz/
+
+Testing GPIO outputs
+--------------------
+
+Run with ``--test`` to activate each configured ``buzz_gpio`` output
+sequentially for one second. Every output is returned to its inactive state
+before the next pin is tested. The configured WAVE samples are tested as well.
+
+.. code-block:: sh
+
+    school-bell schema.json --test
 
 The optional ``holidays`` setting accepts an `OpenHolidays group code`_.
 For example, ``BE-NL`` selects the Dutch-language school-holiday group in

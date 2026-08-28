@@ -50,20 +50,28 @@ def test_validate_time():
 
 
 class FakeBuzzer:
+    instances = []
+    events = []
+
     def __init__(self, pin):
         self.pin = pin
         self.on_calls = 0
         self.off_calls = 0
+        self.instances.append(self)
 
     def on(self):
         self.on_calls += 1
+        self.events.append((self.pin, "on"))
 
     def off(self):
         self.off_calls += 1
+        self.events.append((self.pin, "off"))
 
 
 @pytest.fixture
 def fake_buzzers(monkeypatch):
+    FakeBuzzer.instances = []
+    FakeBuzzer.events = []
     monkeypatch.setattr(school_bell_module, "is_raspberry_pi", lambda: True)
     monkeypatch.setattr(school_bell_module, "Buzzer", FakeBuzzer)
 
@@ -101,6 +109,80 @@ def test_multiple_buzzers_switch_together(fake_buzzers, monkeypatch):
     assert bell.ring("0") is True
     assert [buzzer.on_calls for buzzer in bell.buzzer] == [1, 1]
     assert [buzzer.off_calls for buzzer in bell.buzzer] == [1, 1]
+
+
+@pytest.mark.parametrize("gpio_pins", [17, [17, 27]])
+def test_buzzers_at_startup(gpio_pins, fake_buzzers, monkeypatch):
+    monkeypatch.setattr(school_bell_module, "sleep", lambda duration: None)
+
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=gpio_pins,
+        test=True,
+    )
+
+    pins = gpio_pins if isinstance(gpio_pins, list) else [gpio_pins]
+    assert [event for event in FakeBuzzer.events if event[1] == "on"] == [
+        (pin, "on") for pin in pins
+    ]
+    assert all(buzzer.off_calls >= 1 for buzzer in bell.buzzer)
+
+
+def test_buzzer_test_is_sequential(fake_buzzers, monkeypatch):
+    durations = []
+    monkeypatch.setattr(
+        school_bell_module, "sleep", lambda duration: durations.append(duration)
+    )
+
+    SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=[17, 27],
+        test=True,
+    )
+
+    assert FakeBuzzer.events[:4] == [
+        (17, "on"),
+        (17, "off"),
+        (27, "on"),
+        (27, "off"),
+    ]
+    assert durations == [1.0, 1.0]
+
+
+@pytest.mark.parametrize("exception_type", [RuntimeError, KeyboardInterrupt])
+def test_buzzer_test_cleans_up_after_error(
+    exception_type, fake_buzzers, monkeypatch
+):
+    def fail(_duration):
+        raise exception_type("test interruption")
+
+    monkeypatch.setattr(school_bell_module, "sleep", fail)
+
+    with pytest.raises(exception_type, match="test interruption"):
+        SchoolBell(
+            schedule={},
+            wav={},
+            root=f"{getcwd()}/samples",
+            buzz_gpio=[17, 27],
+            test=True,
+        )
+
+    assert all(buzzer.off_calls >= 1 for buzzer in FakeBuzzer.instances)
+
+
+def test_buzzer_test_without_configured_pins(fake_buzzers):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        test=True,
+    )
+
+    assert bell.test_buzzers() is True
 
 
 @pytest.mark.parametrize("gpio_pins", [True, "17", [17, "27"]])
