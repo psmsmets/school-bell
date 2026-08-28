@@ -33,19 +33,20 @@
           - checkinstall
         state: present
 
-    - name: Configure vim
+    - name: Create default vim configuration when absent
       become: true
       become_user: "{{ school_bell_user }}"
-      ansible.builtin.blockinfile:
-        path: "{{ school_bell_home }}/.vimrc"
-        block: |
+      ansible.builtin.copy:
+        dest: "{{ school_bell_home }}/.vimrc"
+        content: |
           filetype plugin indent off
           syntax on
           set term=builtin_xterm
           set term=xterm-256color
           set number
           set mouse=r
-        create: true
+        owner: "{{ school_bell_user }}"
+        force: false
         mode: "0644"
 
     - name: Expand root filesystem
