@@ -10,6 +10,7 @@ Group={{ school_bell_group }}
 WorkingDirectory={{ school_bell_home }}
 Environment="VIRTUAL_ENV={{ school_bell_home }}/.local"
 Environment="PATH={{ school_bell_home }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="GPIOZERO_PIN_FACTORY=lgpio"
 ExecStart={{ school_bell_home }}/.local/bin/school-bell {{ school_bell_config_path }}{{ ' --debug' if school_bell_debug | bool else '' }}{{ ' --test' if school_bell_test | bool else '' }}
 StandardOutput=journal
 StandardError=journal

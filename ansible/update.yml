@@ -17,6 +17,16 @@
         school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
 
   tasks:
+    - name: Install lgpio backend in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.pip:
+        name:
+          - "lgpio>=0.2.2.0; python_version < '3.13'"
+          - "adafruit-lgpio>=0.2.2.0; python_version >= '3.13'"
+        state: present
+        virtualenv: "{{ school_bell_home }}/.local"
+
     - name: Update School Bell in virtual environment
       become: true
       become_user: "{{ school_bell_user }}"
@@ -25,6 +35,16 @@
         state: latest
         virtualenv: "{{ school_bell_home }}/.local"
       notify: Restart School Bell
+
+    - name: Verify lgpio backend in virtual environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      ansible.builtin.command:
+        argv:
+          - "{{ school_bell_home }}/.local/bin/python"
+          - -c
+          - import lgpio
+      changed_when: false
 
   handlers:
     - name: Restart School Bell

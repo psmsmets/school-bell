@@ -17,6 +17,11 @@ uploads the audio files from the repository's `samples/` directory to
 `school-bell /home/pi/schema.json`. Supply another controller-side JSON file
 with `-e school_bell_config_src=path/to/schema.json`.
 
+School Bell installs `lgpio` as its gpiozero pin factory on Raspberry Pi. For
+Python 3.13 and newer it uses the compatible `adafruit-lgpio` distribution,
+which still provides the `lgpio` module. Both install and update verify the
+module before restarting the service.
+
 Enable startup diagnostics independently or together:
 
 ```sh
