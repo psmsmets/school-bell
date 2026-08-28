@@ -21,12 +21,17 @@ def init_logger(
     logger = logging.getLogger(prog or 'school-bell')
 
     # log to stdout
-    streamHandler = logging.StreamHandler(sys.stdout)
-    streamHandler.setFormatter(logging.Formatter(
-        "%(levelname)s: %(message)s"
-        # "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
-    logger.addHandler(streamHandler)
+    if not any(
+        getattr(handler, '_school_bell_stream', False)
+        for handler in logger.handlers
+    ):
+        streamHandler = logging.StreamHandler(sys.stdout)
+        streamHandler._school_bell_stream = True
+        streamHandler.setFormatter(logging.Formatter(
+            "%(levelname)s: %(message)s"
+            # "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
+        logger.addHandler(streamHandler)
 
     # set logger level
     logger.setLevel(logging.DEBUG if debug else logging.INFO)

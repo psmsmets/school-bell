@@ -186,6 +186,16 @@ Logs are handled via ``syslog``. Show all logs of today:
     journalctl -u school-bell --since=today
 
 
+Remote monitoring
+=================
+
+School Bell can forward structured events from multiple Raspberry Pis to a
+central syslog/Graylog server and expose optional ``/status`` and ``/health``
+HTTP endpoints. See the `remote monitoring guide`_.
+
+.. _remote monitoring guide: docs/MONITORING.rst
+
+
 Licensing
 =========
 

@@ -2,20 +2,28 @@
 
 # absolute imports
 import calendar
+import copy
 import datetime
 import os
 import re
 import requests
 import schedule
+import socket
 import sys
 from gpiozero import Buzzer
 from logging import Logger
-from threading import Thread
+from threading import RLock, Thread
 from time import sleep
 from typing import List, Union
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
+from .monitoring import (
+    StatusServer,
+    configure_remote_syslog,
+    get_systemd_status,
+    log_event,
+)
 from .utils import init_logger, is_raspberry_pi, system_call
 try:
     from .version import version
@@ -57,6 +65,7 @@ class SchoolBell(object):
         debug: bool = None,
         prog: str = None,
         info: str = None,
+        monitoring: dict = None,
     ):
         """Initialize the SchoolBell object
         """
@@ -64,7 +73,47 @@ class SchoolBell(object):
         # Preamble
         prog = prog or 'school-bell'
         info = info or 'Python-scheduled ringing of a school bell.'
+        if monitoring is not None and not isinstance(monitoring, dict):
+            raise TypeError('monitoring should be a dictionary!')
+
+        self.__started_at = datetime.datetime.now(datetime.timezone.utc)
+        self.__hostname = socket.gethostname()
+        self.__state_lock = RLock()
+        self.__scheduler_running = False
+        self.__last_ring = None
+        self.__last_error = None
+        self.__monitoring = monitoring or {}
+        self.__device_id = self.__monitoring.get(
+            'device_id', self.__hostname
+        )
+        if not isinstance(self.__device_id, str) or not self.__device_id:
+            raise ValueError('monitoring.device_id should be a non-empty string!')
+        self.__monitoring_labels = self.__monitoring.get('labels', {})
+        if not isinstance(self.__monitoring_labels, dict):
+            raise TypeError('monitoring.labels should be a dictionary!')
+        if any(
+            re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', str(key)) is None
+            for key in self.__monitoring_labels
+        ):
+            raise ValueError(
+                'monitoring label names should contain letters, numbers and '
+                'underscores, and start with a letter!'
+            )
+        self.__monitoring_server = None
+        self.__remote_syslog_handler = None
+        self.__schedule_config = copy.deepcopy(schedule or {})
         self.__logger = init_logger(prog, debug or False)
+        try:
+            self.__remote_syslog_handler = configure_remote_syslog(
+                logger=self.__logger,
+                config=self.__monitoring.get('syslog'),
+                version=self.reported_version,
+                hostname=self.__hostname,
+                device_id=self.__device_id,
+                labels=self.__monitoring_labels,
+            )
+        except (TypeError, ValueError) as err:
+            self.__logger.error('Remote syslog disabled: %s', err)
         self.__alsa = sys.platform != "darwin"
         self.log.info(info)
         self.log.info(f"version = {version}")
@@ -83,6 +132,160 @@ class SchoolBell(object):
 
         # Create schedule
         self.create_schedule(schedule)
+        self.__schedule_loaded = isinstance(schedule, dict)
+        log_event(
+            self.log,
+            'schedule_loaded',
+            scheduled_jobs=self.scheduled_jobs,
+        )
+        self._start_monitoring()
+        self._configure_heartbeat()
+        log_event(self.log, 'service_started')
+
+    @property
+    def reported_version(self) -> str:
+        """Return a stable version value for monitoring clients."""
+        if not version or version.startswith('VERSION-NOT-FOUND'):
+            return 'unknown'
+        return version
+
+    @property
+    def scheduled_jobs(self) -> int:
+        """Return the number of configured bell jobs."""
+        return sum(
+            len(times) for times in self.__schedule_config.values()
+            if isinstance(times, dict)
+        )
+
+    def _start_monitoring(self):
+        config = self.__monitoring.get('status')
+        if not config:
+            return
+        if not isinstance(config, dict):
+            self.log.error(
+                'HTTP monitoring disabled: monitoring.status should be a '
+                'dictionary!'
+            )
+            return
+        if not config.get('enabled', False):
+            return
+
+        host = config.get('host', '127.0.0.1')
+        try:
+            port = int(config.get('port', 8080))
+            self.__monitoring_server = StatusServer(
+                host=host,
+                port=port,
+                status_provider=self.monitoring_status,
+                health_provider=self.monitoring_health,
+                logger=self.log,
+                token=config.get('token'),
+            ).start()
+            bound_host, bound_port = self.__monitoring_server.address[:2]
+            self.log.info(
+                'Monitoring status endpoint listening on %s:%s',
+                bound_host, bound_port
+            )
+        except (OSError, TypeError, ValueError) as err:
+            self.log.error(
+                'Unable to start monitoring status endpoint on %s: %s',
+                host, err
+            )
+            log_event(
+                self.log,
+                'health_status',
+                status='failure',
+                endpoint='http',
+                error_category='monitoring_bind_error',
+            )
+
+    def _configure_heartbeat(self):
+        if not self.__monitoring.get('syslog'):
+            return
+        try:
+            heartbeat_interval = int(
+                self.__monitoring.get('heartbeat_interval', 300)
+            )
+            if heartbeat_interval <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            self.log.error(
+                'Invalid monitoring heartbeat interval; using 300 seconds.'
+            )
+            heartbeat_interval = 300
+        schedule.every(heartbeat_interval).seconds.do(
+            self._emit_health_status
+        )
+
+    def monitoring_status(self) -> dict:
+        """Return current application state without exposing credentials."""
+        with self.__state_lock:
+            uptime = datetime.datetime.now(
+                datetime.timezone.utc
+            ) - self.__started_at
+            payload = {
+                'service': 'school-bell',
+                'status': (
+                    'running' if self.__scheduler_running else 'starting'
+                ),
+                'version': self.reported_version,
+                'hostname': self.__hostname,
+                'device_id': self.__device_id,
+                'labels': copy.deepcopy(self.__monitoring_labels),
+                'started_at': self.__started_at.isoformat(),
+                'uptime_seconds': int(uptime.total_seconds()),
+                'schedule_loaded': self.__schedule_loaded,
+                'scheduled_jobs': self.scheduled_jobs,
+                'schedule': copy.deepcopy(self.__schedule_config),
+                'trigger_hosts': sorted(self.trigger.keys()),
+                'gpio_pins': list(self.__buzzer_pins),
+                'last_ring': copy.deepcopy(self.__last_ring),
+                'last_error': copy.deepcopy(self.__last_error),
+            }
+
+        status_config = self.__monitoring.get('status', {})
+        if status_config.get('include_systemd', True):
+            payload['systemd'] = get_systemd_status()
+        return payload
+
+    def monitoring_health(self):
+        """Return an HTTP health result and its JSON payload."""
+        with self.__state_lock:
+            healthy = self.__scheduler_running and self.__last_error is None
+        return healthy, {'status': 'ok' if healthy else 'unhealthy'}
+
+    @property
+    def monitoring_address(self):
+        """Return the bound monitoring address, primarily for diagnostics."""
+        if self.__monitoring_server is None:
+            return None
+        return self.__monitoring_server.address
+
+    def _emit_health_status(self):
+        """Emit a heartbeat used to detect silent/offline devices."""
+        healthy, _ = self.monitoring_health()
+        log_event(
+            self.log,
+            'health_status',
+            status='success' if healthy else 'failure',
+            uptime_seconds=int((
+                datetime.datetime.now(datetime.timezone.utc) -
+                self.__started_at
+            ).total_seconds()),
+            scheduled_jobs=self.scheduled_jobs,
+        )
+        return healthy
+
+    def close(self):
+        """Stop monitoring resources cleanly."""
+        log_event(self.log, 'service_stopped')
+        if self.__monitoring_server is not None:
+            self.__monitoring_server.stop()
+            self.__monitoring_server = None
+        if self.__remote_syslog_handler is not None:
+            self.log.removeHandler(self.__remote_syslog_handler)
+            self.__remote_syslog_handler.close()
+            self.__remote_syslog_handler = None
 
     @property
     def device(self):
@@ -170,6 +373,11 @@ class SchoolBell(object):
                 buzzer.off()
 
         self.log.info("GPIO test completed.")
+        log_event(
+            self.log,
+            'gpio_test',
+            gpio_pins=list(self.__buzzer_pins),
+        )
         return True
 
     @property
@@ -440,6 +648,14 @@ class SchoolBell(object):
         if not success:
             err = f"Could not play WAVE audio file {wav}!"
             self.log.error(err)
+            log_event(
+                self.log,
+                'audio_error',
+                status='failure',
+                level=40,
+                wav_key=str(key),
+                error_category='audio_playback_error',
+            )
             raise RuntimeError(err)
         self.log.info("Play completed successfully.")
         return True
@@ -474,43 +690,108 @@ class SchoolBell(object):
 
         if self.is_holiday():
             self.log.info("today is a holiday, no need to ring!")
+            with self.__state_lock:
+                self.__last_ring = {
+                    'time': datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                    'key': str(key),
+                    'status': 'skipped',
+                    'skip_reason': 'holiday',
+                }
+            log_event(
+                self.log,
+                'bell_skipped_holiday',
+                status='skipped',
+                wav_key=str(key),
+                skip_reason='holiday',
+            )
             return False
 
         wav = self.get_wav(key)
 
         self.log.info(f"ring {key}: {os.path.basename(wav)}")
 
-        threads = []
+        operations = []
         for host, root in self.trigger.items():
             remote_wav = self.get_wav(key, root)
-            threads.append(
-                Thread(
-                    target=_play_remote,
-                    args=(host, remote_wav, False, self.timeout, self.log)
-                )
+            operations.append(
+                (_play_remote,
+                 (host, remote_wav, False, self.timeout, self.log))
             )
-        threads.append(
-            Thread(
-                target=_play,
-                args=(wav, False, self.device, self.log)
-            )
+        operations.append(
+            (_play, (wav, False, self.device, self.log))
         )
+        results = [False] * len(operations)
+        threads = [
+            Thread(
+                target=_capture_result,
+                args=(results, index, function, arguments)
+            )
+            for index, (function, arguments) in enumerate(operations)
+        ]
 
-        if self.buzzer:
-            self.log.debug(".. buzzer on")
-            for buzzer in self.buzzer:
-                buzzer.on()
+        try:
+            if self.buzzer:
+                self.log.debug(".. buzzer on")
+                for buzzer in self.buzzer:
+                    buzzer.on()
 
-        for t in threads:
-            t.start()
+            for t in threads:
+                t.start()
 
-        for t in threads:
-            t.join()
+            for t in threads:
+                t.join()
 
-        if self.buzzer:
-            self.log.debug(".. buzzer off")
-            for buzzer in self.buzzer:
-                buzzer.off()
+            if not all(results):
+                raise RuntimeError('One or more audio outputs failed!')
+        except Exception as err:
+            with self.__state_lock:
+                self.__last_error = {
+                    'time': datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                    'category': 'bell_error',
+                    'message': str(err),
+                }
+            log_event(
+                self.log,
+                'audio_error',
+                status='failure',
+                level=40,
+                wav_key=str(key),
+                error_category='audio_playback_error',
+            )
+            log_event(
+                self.log,
+                'bell_ring',
+                status='failure',
+                level=40,
+                wav_key=str(key),
+                gpio_pins=list(self.__buzzer_pins),
+                error_category='bell_error',
+            )
+            raise
+        finally:
+            if self.buzzer:
+                self.log.debug(".. buzzer off")
+                for buzzer in self.buzzer:
+                    buzzer.off()
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with self.__state_lock:
+            self.__last_ring = {
+                'time': now,
+                'key': str(key),
+                'status': 'success',
+            }
+            self.__last_error = None
+        log_event(
+            self.log,
+            'bell_ring',
+            wav_key=str(key),
+            gpio_pins=list(self.__buzzer_pins),
+        )
 
         self.log.debug(".. done")
         return True
@@ -553,15 +834,22 @@ class SchoolBell(object):
     def run_schedule(self, _test_mode: bool = False):
         """
         """
-        if _test_mode:
-            self.log.info('Start schedule in test mode.')
-            schedule.run_all(delay_seconds=10)
-            return True
-        else:
-            self.log.info('Start schedule.')
-            while True:
-                schedule.run_pending()
-                sleep(.2)
+        with self.__state_lock:
+            self.__scheduler_running = True
+        self._emit_health_status()
+        try:
+            if _test_mode:
+                self.log.info('Start schedule in test mode.')
+                schedule.run_all(delay_seconds=10)
+                return True
+            else:
+                self.log.info('Start schedule.')
+                while True:
+                    schedule.run_pending()
+                    sleep(.2)
+        finally:
+            with self.__state_lock:
+                self.__scheduler_running = False
 
 
 def _ssh(self, host: str, timeout: int = 10):
@@ -572,6 +860,14 @@ def _ssh(self, host: str, timeout: int = 10):
             "-o", f"ConnectTimeout={timeout}",
             "-o", "StrictHostKeyChecking=no",
             host]
+
+
+def _capture_result(results: list, index: int, function, arguments: tuple):
+    """Capture a worker result without losing failures inside a thread."""
+    try:
+        results[index] = bool(function(*arguments))
+    except Exception:
+        results[index] = False
 
 
 def _play_remote(host: str, wav: str, test: bool = False, timeout: int = None,

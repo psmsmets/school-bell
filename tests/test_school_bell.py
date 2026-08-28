@@ -111,6 +111,23 @@ def test_multiple_buzzers_switch_together(fake_buzzers, monkeypatch):
     assert [buzzer.off_calls for buzzer in bell.buzzer] == [1, 1]
 
 
+def test_ring_fails_when_audio_output_fails(monkeypatch):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        monitoring={'status': {'include_systemd': False}},
+    )
+    monkeypatch.setattr(bell, "is_holiday", lambda: False)
+    monkeypatch.setattr(bell, "get_wav", lambda key, root=None: "bell.wav")
+    monkeypatch.setattr(school_bell_module, "_play", lambda *args: False)
+
+    with pytest.raises(RuntimeError, match="audio outputs failed"):
+        bell.ring("0")
+
+    assert bell.monitoring_status()['last_error']['category'] == 'bell_error'
+
+
 @pytest.mark.parametrize("gpio_pins", [17, [17, 27]])
 def test_buzzers_at_startup(gpio_pins, fake_buzzers, monkeypatch):
     monkeypatch.setattr(school_bell_module, "sleep", lambda duration: None)
