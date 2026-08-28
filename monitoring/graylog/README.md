@@ -1,10 +1,76 @@
 # Graylog setup for School Bell
 
 This directory configures one central Graylog syslog input for any number of
-School Bell Raspberry Pis. Every Pi must have a unique `monitoring.device_id`;
-the hostname remains available as a separate field.
+School Bell Raspberry Pis. The device ID defaults to the hostname. Set
+`monitoring.device_id` only when a separate, stable monitoring identity is
+needed.
 
-## 1. Create the input
+## 1. Configure each Raspberry Pi
+
+Add `monitoring` at the top level of `/home/pi/schema.json`, next to
+`schedule`, `wav`, `buzz_gpio`, and the other School Bell settings:
+
+```json
+{
+  "root": "/home/pi/samples",
+  "buzz_gpio": [26, 20],
+  "monitoring": {
+    "labels": {
+      "school": "vito",
+      "zone": "main"
+    },
+    "heartbeat_interval": 300,
+    "syslog": {
+      "host": "192.168.88.90",
+      "port": 1514,
+      "protocol": "udp",
+      "facility": "daemon"
+    },
+    "status": {
+      "enabled": true,
+      "host": "0.0.0.0",
+      "port": 8080,
+      "token": "replace-with-a-secret",
+      "include_systemd": true
+    }
+  }
+}
+```
+
+Use the address of the Graylog server for `host`, and make `port` and
+`protocol` match the active Graylog Syslog input. Make every hostname unique,
+or configure an explicit unique `device_id` if hostnames are not a suitable
+stable identity. Labels are optional, but make dashboard filtering per school,
+site, or zone easier.
+
+The `status` section enables the optional read-only web service on the Pi.
+Binding it to `0.0.0.0` makes it reachable over the network, so use a bearer
+token and restrict port 8080 to the management network where possible. Check
+both endpoints with:
+
+```sh
+curl -H 'Authorization: Bearer replace-with-a-secret' \
+  http://pibell-vito-01:8080/status
+curl -H 'Authorization: Bearer replace-with-a-secret' \
+  http://pibell-vito-01:8080/health
+```
+
+`/status` returns the version, uptime, schedule, GPIO pins, last ring, last
+error, and an optional safe subset of systemd state. `/health` returns HTTP 200
+while the scheduler is healthy and HTTP 503 when it is unhealthy. Omit the
+complete `status` section to disable the web service.
+
+Restart School Bell after changing the configuration:
+
+```sh
+sudo systemctl restart school-bell.service
+sudo journalctl -u school-bell.service -n 50 --no-pager
+```
+
+With the default interval, a `health_status` heartbeat should appear in
+Graylog within five minutes.
+
+## 2. Create the input
 
 Create a Graylog access token with permission to manage inputs, then run:
 
@@ -18,7 +84,7 @@ export GRAYLOG_INPUT_PORT=1514
 The script creates a global UDP Syslog input. Set `GRAYLOG_PROTOCOL=tcp` for a
 TCP input. Ensure the selected port is allowed by the Graylog host firewall.
 
-## 2. Extract the JSON fields
+## 3. Extract the JSON fields
 
 Create a pipeline in Graylog, add the rule from
 [`pipeline-rule.conf`](pipeline-rule.conf), and connect the pipeline to the
@@ -51,7 +117,7 @@ One school:
 sb_application:school-bell AND sb_label_school:vito
 ```
 
-## 3. Send test events
+## 4. Send test events
 
 Test two simulated Raspberry Pis:
 
@@ -68,9 +134,10 @@ The helper sends the same syslog priority as the application defaults:
 facility `daemon` and severity `info` (PRI 30). Graylog should therefore show
 `facility=daemon` and numeric `level=6` alongside the extracted `sb_` fields.
 Both use an RFC5424 header, so Graylog's native `source` field contains the
-Raspberry Pi hostname while `message` contains only the structured JSON.
+Raspberry Pi hostname. Graylog 7 may retain RFC5424 metadata before the JSON in
+`message`; the supplied pipeline strips it before parsing.
 
-## 4. Graylog 7 dashboard
+## 5. Graylog 7 dashboard
 
 Create a dashboard named **School Bell Overview** and select the School Bell
 stream. Use a default time range of 24 hours. Every widget has its own query,
