@@ -14,6 +14,7 @@ Add `monitoring` at the top level of `/home/pi/schema.json`, next to
 {
   "root": "/home/pi/samples",
   "buzz_gpio": [26, 20],
+  "buzz_active_high": false,
   "monitoring": {
     "labels": {
       "school": "vito",

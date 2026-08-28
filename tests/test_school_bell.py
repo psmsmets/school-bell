@@ -53,8 +53,10 @@ class FakeBuzzer:
     instances = []
     events = []
 
-    def __init__(self, pin):
+    def __init__(self, pin, active_high=True, initial_value=False):
         self.pin = pin
+        self.active_high = active_high
+        self.initial_value = initial_value
         self.on_calls = 0
         self.off_calls = 0
         self.instances.append(self)
@@ -93,6 +95,51 @@ def test_single_buzzer_is_backwards_compatible(fake_buzzers):
 def test_multiple_buzzers(fake_buzzers):
     buzzers = create_buzzer([17, 27])
     assert [buzzer.pin for buzzer in buzzers] == [17, 27]
+
+
+@pytest.mark.parametrize('active_high', [True, False])
+def test_buzzer_polarity_and_safe_initial_state(active_high, fake_buzzers):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=[17, 27],
+        buzz_active_high=active_high,
+    )
+
+    assert bell.buzz_active_high is active_high
+    assert all(
+        buzzer.active_high is active_high for buzzer in bell.buzzer
+    )
+    assert all(buzzer.initial_value is False for buzzer in bell.buzzer)
+
+
+@pytest.mark.parametrize('active_high', [None, 0, 1, 'false'])
+def test_invalid_buzzer_polarity(active_high, fake_buzzers):
+    with pytest.raises(TypeError, match='buzz_active_high'):
+        SchoolBell(
+            schedule={},
+            wav={},
+            root=f"{getcwd()}/samples",
+            buzz_gpio=17,
+            buzz_active_high=active_high,
+        )
+
+
+def test_close_returns_relays_to_inactive_state(fake_buzzers):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=[17, 27],
+        buzz_active_high=False,
+    )
+
+    for buzzer in bell.buzzer:
+        buzzer.on()
+    bell.close()
+
+    assert all(buzzer.off_calls == 1 for buzzer in bell.buzzer)
 
 
 def test_multiple_buzzers_switch_together(fake_buzzers, monkeypatch):

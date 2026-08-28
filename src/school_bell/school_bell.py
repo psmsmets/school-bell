@@ -59,6 +59,7 @@ class SchoolBell(object):
         test: bool = None,
         device: str = None,
         buzz_gpio: Union[int, List[int]] = None,
+        buzz_active_high: bool = True,
         timeout: int = None,
         holidays: str = None,
         trigger: dict = None,
@@ -124,6 +125,9 @@ class SchoolBell(object):
         self.root = root or None
         self.test = test or False
         self.device = device or None
+        if not isinstance(buzz_active_high, bool):
+            raise TypeError('buzz_active_high should be a boolean!')
+        self.__buzz_active_high = buzz_active_high
         self.buzzer = buzz_gpio
         self.timeout = timeout or 10
         self.openholidays = holidays or None
@@ -239,6 +243,7 @@ class SchoolBell(object):
                 'schedule': copy.deepcopy(self.__schedule_config),
                 'trigger_hosts': sorted(self.trigger.keys()),
                 'gpio_pins': list(self.__buzzer_pins),
+                'gpio_active_high': self.__buzz_active_high,
                 'last_ring': copy.deepcopy(self.__last_ring),
                 'last_error': copy.deepcopy(self.__last_error),
             }
@@ -278,6 +283,8 @@ class SchoolBell(object):
 
     def close(self):
         """Stop monitoring resources cleanly."""
+        for buzzer in getattr(self, '_SchoolBell__buzzer', []):
+            buzzer.off()
         log_event(self.log, 'service_stopped')
         if self.__monitoring_server is not None:
             self.__monitoring_server.stop()
@@ -310,9 +317,15 @@ class SchoolBell(object):
         """
         return self.__buzzer
 
+    @property
+    def buzz_active_high(self):
+        """Return whether a logical on state drives the GPIO high."""
+        return self.__buzz_active_high
+
     @buzzer.setter
     def buzzer(self, gpio_pins: Union[int, List[int]]):
         self.log.info(f"buzzer = {gpio_pins or False}")
+        self.log.info(f"buzzer active high = {self.__buzz_active_high}")
 
         if gpio_pins is None:
             gpio_pins = []
@@ -334,7 +347,14 @@ class SchoolBell(object):
 
         if is_raspberry_pi():
             try:
-                self.__buzzer = [Buzzer(pin) for pin in gpio_pins]
+                self.__buzzer = [
+                    Buzzer(
+                        pin,
+                        active_high=self.__buzz_active_high,
+                        initial_value=False,
+                    )
+                    for pin in gpio_pins
+                ]
                 for buzzer in self.__buzzer:
                     self.log.debug(f"  {buzzer}")
                 if self.test:
@@ -377,6 +397,7 @@ class SchoolBell(object):
             self.log,
             'gpio_test',
             gpio_pins=list(self.__buzzer_pins),
+            gpio_active_high=self.__buzz_active_high,
         )
         return True
 
@@ -769,6 +790,7 @@ class SchoolBell(object):
                 level=40,
                 wav_key=str(key),
                 gpio_pins=list(self.__buzzer_pins),
+                gpio_active_high=self.__buzz_active_high,
                 error_category='bell_error',
             )
             raise
@@ -791,6 +813,7 @@ class SchoolBell(object):
             'bell_ring',
             wav_key=str(key),
             gpio_pins=list(self.__buzzer_pins),
+            gpio_active_high=self.__buzz_active_high,
         )
 
         self.log.debug(".. done")
