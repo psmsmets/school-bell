@@ -106,8 +106,8 @@ def main():
     parser.add_argument(
         '--test', action='store_true',
         default=False,
-        help=('Play one second samples of each WAVE audio file from '
-              'the JSON configuration at startup '
+        help=('Test each configured GPIO pin and play one second of each '
+              'WAVE audio file at startup '
               '(default: %(default)s)')
     )
     parser.add_argument(

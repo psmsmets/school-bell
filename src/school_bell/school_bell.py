@@ -125,6 +125,7 @@ class SchoolBell(object):
             )
 
         self.__buzzer = []
+        self.__buzzer_pins = gpio_pins
         if not gpio_pins:
             return
 
@@ -133,11 +134,43 @@ class SchoolBell(object):
                 self.__buzzer = [Buzzer(pin) for pin in gpio_pins]
                 for buzzer in self.__buzzer:
                     self.log.debug(f"  {buzzer}")
+                if self.test:
+                    self.test_buzzers()
             except Exception as err:
                 self.log.error(err)
-                raise Exception(err)
+                raise
         else:
             self.log.warning("Host is not a Raspberry Pi: buzzer disabled!")
+
+    def test_buzzers(self, duration: float = 1.0) -> bool:
+        """Test each configured GPIO output sequentially.
+
+        All outputs are returned to their inactive state, including when the
+        test is interrupted.
+        """
+        if not self.buzzer:
+            self.log.info("No GPIO pins configured: GPIO test skipped.")
+            return True
+
+        self.log.info("Testing configured GPIO pins...")
+        total = len(self.buzzer)
+
+        try:
+            for index, (pin, buzzer) in enumerate(
+                zip(self.__buzzer_pins, self.buzzer), start=1
+            ):
+                self.log.info(f"Testing GPIO {pin} ({index}/{total})")
+                try:
+                    buzzer.on()
+                    sleep(duration)
+                finally:
+                    buzzer.off()
+        finally:
+            for buzzer in self.buzzer:
+                buzzer.off()
+
+        self.log.info("GPIO test completed.")
+        return True
 
     @property
     def log(self):
