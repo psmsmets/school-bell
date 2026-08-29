@@ -7,7 +7,7 @@
     school_bell_version: main
     school_bell_config_name: schema.json
     school_bell_config_src: files/schema.json
-    school_bell_config_overwrite: false
+    school_bell_force_reinstall: false
     school_bell_debug: false
     school_bell_test: false
 
@@ -32,6 +32,20 @@
         school_bell_group: "{{ school_bell_primary_group.stdout }}"
         school_bell_config_path: >-
           {{ ansible_facts.getent_passwd[school_bell_user][4] }}/{{ school_bell_config_name }}
+
+    - name: Record existing School Bell configuration
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+        checksum_algorithm: sha256
+      register: school_bell_config_before_install
+
+    - name: Require an existing configuration to be a regular file
+      ansible.builtin.assert:
+        that: school_bell_config_before_install.stat.isreg | default(false)
+        fail_msg: >-
+          Existing configuration {{ school_bell_config_path }} is not a regular
+          file; refusing to replace it.
+      when: school_bell_config_before_install.stat.exists | default(false)
 
   tasks:
     - name: Install git
@@ -92,11 +106,6 @@
         directory_mode: "0755"
       notify: Restart School Bell
 
-    - name: Check for existing School Bell configuration
-      ansible.builtin.stat:
-        path: "{{ school_bell_config_path }}"
-      register: school_bell_existing_config
-
     - name: Validate School Bell configuration JSON on controller
       ansible.builtin.assert:
         that:
@@ -107,10 +116,10 @@
           Configuration {{ school_bell_config_src }} must contain a valid JSON
           object.
       when: >-
-        not school_bell_existing_config.stat.exists | default(false) or
-        school_bell_config_overwrite | bool
+        not school_bell_config_before_install.stat.exists | default(false) or
+        school_bell_force_reinstall | bool
 
-    - name: Install School Bell configuration when absent or explicitly requested
+    - name: Install School Bell configuration when absent or force reinstalling
       become: true
       ansible.builtin.copy:
         src: "{{ school_bell_config_src }}"
@@ -118,15 +127,17 @@
         owner: "{{ school_bell_user }}"
         group: "{{ school_bell_group }}"
         mode: "0644"
-        backup: "{{ school_bell_config_overwrite | bool }}"
+        backup: "{{ school_bell_force_reinstall | bool }}"
+        force: "{{ school_bell_force_reinstall | bool }}"
       when: >-
-        not school_bell_existing_config.stat.exists | default(false) or
-        school_bell_config_overwrite | bool
+        not school_bell_config_before_install.stat.exists | default(false) or
+        school_bell_force_reinstall | bool
       notify: Restart School Bell
 
     - name: Check School Bell configuration
       ansible.builtin.stat:
         path: "{{ school_bell_config_path }}"
+        checksum_algorithm: sha256
       register: school_bell_config
 
     - name: Require School Bell configuration
@@ -134,6 +145,19 @@
         that: school_bell_config.stat.isreg | default(false)
         fail_msg: >-
           Configuration {{ school_bell_config_path }} could not be installed.
+
+    - name: Verify existing configuration was preserved
+      ansible.builtin.assert:
+        that:
+          - >-
+            school_bell_config.stat.checksum | default('') ==
+            school_bell_config_before_install.stat.checksum
+        fail_msg: >-
+          Existing configuration {{ school_bell_config_path }} changed during
+          installation without school_bell_force_reinstall=true.
+      when:
+        - school_bell_config_before_install.stat.exists | default(false)
+        - not school_bell_force_reinstall | bool
 
     - name: Install School Bell systemd unit
       become: true
