@@ -23,8 +23,12 @@ Setup
 =====
 
 See the guide_ how to configure a Raspberry Pi and Python 3.13 virtual environment from scratch.
+For managed Raspberry Pi deployments, see the `Ansible playbook guide`_. It
+documents how application installs and updates preserve an existing
+``schema.json``, and how to deploy a schedule intentionally.
 
 .. _guide: docs/GUIDE.rst
+.. _Ansible playbook guide: ansible/README.md
 
 Install the Python package using ``pip``.
 

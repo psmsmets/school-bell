@@ -5,6 +5,7 @@
     school_bell_user: pi
     school_bell_repository: https://github.com/psmsmets/school-bell.git
     school_bell_version: main
+    school_bell_config_name: schema.json
 
   pre_tasks:
     - name: Read School Bell user account
@@ -12,9 +13,25 @@
         database: passwd
         key: "{{ school_bell_user }}"
 
-    - name: Determine School Bell home directory
+    - name: Determine School Bell paths
       ansible.builtin.set_fact:
         school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
+        school_bell_config_path: >-
+          {{ ansible_facts.getent_passwd[school_bell_user][4] }}/{{ school_bell_config_name }}
+
+    - name: Record School Bell configuration before update
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+        checksum_algorithm: sha256
+      register: school_bell_config_before_update
+
+    - name: Require an existing configuration to be a regular file
+      ansible.builtin.assert:
+        that: school_bell_config_before_update.stat.isreg | default(false)
+        fail_msg: >-
+          Existing configuration {{ school_bell_config_path }} is not a regular
+          file; refusing to update School Bell.
+      when: school_bell_config_before_update.stat.exists | default(false)
 
   tasks:
     - name: Install lgpio backend in virtual environment
@@ -45,6 +62,25 @@
           - -c
           - import lgpio
       changed_when: false
+
+    - name: Read School Bell configuration after update
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+        checksum_algorithm: sha256
+      register: school_bell_config_after_update
+
+    - name: Verify School Bell configuration was preserved
+      ansible.builtin.assert:
+        that:
+          - school_bell_config_after_update.stat.exists | default(false)
+          - school_bell_config_after_update.stat.isreg | default(false)
+          - >-
+            school_bell_config_after_update.stat.checksum | default('') ==
+            school_bell_config_before_update.stat.checksum
+        fail_msg: >-
+          Configuration {{ school_bell_config_path }} changed during the code
+          update. The service will not be restarted.
+      when: school_bell_config_before_update.stat.exists | default(false)
 
   handlers:
     - name: Restart School Bell
