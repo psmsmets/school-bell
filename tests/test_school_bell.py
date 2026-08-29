@@ -78,6 +78,23 @@ def fake_buzzers(monkeypatch):
     monkeypatch.setattr(school_bell_module, "Buzzer", FakeBuzzer)
 
 
+@pytest.fixture
+def structured_events(monkeypatch):
+    events = []
+
+    def capture(_logger, event, status='success', level=20,
+                message=None, **fields):
+        events.append({
+            'event': event,
+            'status': status,
+            'level': level,
+            **fields,
+        })
+
+    monkeypatch.setattr(school_bell_module, 'log_event', capture)
+    return events
+
+
 def create_buzzer(gpio_pins):
     return SchoolBell(
         schedule={},
@@ -156,6 +173,146 @@ def test_multiple_buzzers_switch_together(fake_buzzers, monkeypatch):
     assert bell.ring("0") is True
     assert [buzzer.on_calls for buzzer in bell.buzzer] == [1, 1]
     assert [buzzer.off_calls for buzzer in bell.buzzer] == [1, 1]
+
+
+def test_gpio_events_include_state_and_cleanup_after_error(
+    fake_buzzers, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=[17, 27],
+        buzz_active_high=False,
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(school_bell_module, '_play', lambda *args: False)
+
+    with pytest.raises(RuntimeError, match='audio outputs failed'):
+        bell.ring('0')
+
+    gpio_events = [
+        event for event in structured_events
+        if event['event'].startswith('gpio_')
+    ]
+    assert gpio_events == [
+        {
+            'event': 'gpio_activated',
+            'status': 'success',
+            'level': 20,
+            'gpio_pins': [17, 27],
+            'gpio_active_high': False,
+            'gpio_state': 'active',
+        },
+        {
+            'event': 'gpio_deactivated',
+            'status': 'success',
+            'level': 20,
+            'gpio_pins': [17, 27],
+            'gpio_active_high': False,
+            'gpio_state': 'inactive',
+        },
+    ]
+
+
+def test_gpio_activation_failure_emits_failure_and_cleanup_events(
+    fake_buzzers, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        buzz_gpio=[17, 27],
+        buzz_active_high=False,
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+
+    def fail_activation():
+        raise RuntimeError('GPIO unavailable')
+
+    monkeypatch.setattr(bell.buzzer[0], 'on', fail_activation)
+
+    with pytest.raises(RuntimeError, match='GPIO unavailable'):
+        bell.ring('0')
+
+    gpio_events = [
+        event for event in structured_events
+        if event['event'].startswith('gpio_')
+    ]
+    assert gpio_events[0]['event'] == 'gpio_activated'
+    assert gpio_events[0]['status'] == 'failure'
+    assert gpio_events[0]['gpio_state'] == 'unknown'
+    assert gpio_events[0]['error_category'] == 'gpio_activation_error'
+    assert gpio_events[-1]['event'] == 'gpio_deactivated'
+    assert gpio_events[-1]['status'] == 'success'
+    assert gpio_events[-1]['gpio_state'] == 'inactive'
+
+
+@pytest.mark.parametrize('success', [True, False])
+def test_remote_trigger_events_report_success_and_failure(
+    success, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+    )
+    monkeypatch.setattr(
+        bell, 'get_remote_wav', lambda host, key: '/remote/bell.wav'
+    )
+    monkeypatch.setattr(
+        school_bell_module, '_play_remote', lambda **kwargs: success
+    )
+    times = iter([10.0, 10.25])
+    monkeypatch.setattr(school_bell_module, 'monotonic', lambda: next(times))
+
+    if success:
+        assert bell.play_remote('pibell-02', '1') is True
+    else:
+        with pytest.raises(RuntimeError, match='remote WAVE'):
+            bell.play_remote('pibell-02', '1')
+
+    event = next(
+        event for event in structured_events
+        if event['event'] == 'remote_trigger'
+    )
+    assert event['remote_host'] == 'pibell-02'
+    assert event['wav_key'] == '1'
+    assert event['duration_seconds'] == 0.25
+    assert event['status'] == ('success' if success else 'failure')
+    if success:
+        assert 'error_category' not in event
+    else:
+        assert event['error_category'] == 'remote_trigger_error'
+
+
+def test_scheduled_ring_emits_remote_trigger_event(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+    )
+    bell.trigger['pibell-02'] = '/remote/samples'
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(school_bell_module, '_play', lambda *args: True)
+    monkeypatch.setattr(
+        school_bell_module, '_play_remote', lambda **kwargs: True
+    )
+
+    assert bell.ring('0') is True
+
+    event = next(
+        event for event in structured_events
+        if event['event'] == 'remote_trigger'
+    )
+    assert event['remote_host'] == 'pibell-02'
+    assert event['wav_key'] == '0'
+    assert event['status'] == 'success'
 
 
 def test_ring_fails_when_audio_output_fails(monkeypatch):
