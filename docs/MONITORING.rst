@@ -72,10 +72,13 @@ Every remote record includes stable fields suitable for Graylog indexing:
     }
 
 Stable event names include ``service_started``, ``service_stopped``,
-``schedule_loaded``, ``bell_ring``, ``bell_skipped_holiday``, ``gpio_test``
-and ``health_status``. Future calendar monitoring can add
-``bell_skipped_calendar``, ``calendar_refresh`` and ``calendar_error`` without
-changing the common fields.
+``schedule_loaded``, ``bell_ring``, ``bell_skipped_holiday``, ``gpio_test``,
+``gpio_activated``, ``gpio_deactivated``, ``remote_trigger``, and
+``health_status``. GPIO events include the configured pins, polarity and
+resulting logical state. Remote-trigger events include the remote host, WAV
+key, duration and a consistent success or failure status. Future calendar
+monitoring can add ``bell_skipped_calendar``, ``calendar_refresh`` and
+``calendar_error`` without changing the common fields.
 
 
 HTTP API

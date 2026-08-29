@@ -5,6 +5,11 @@ School Bell supports two independent, optional monitoring mechanisms:
 - structured events sent to a central syslog or Graylog server;
 - a read-only HTTP service on every Raspberry Pi with `/status` and `/health`.
 
+Structured events include relay activation and deactivation as well as every
+remote trigger. Graylog can therefore filter on `gpio_activated`,
+`gpio_deactivated`, and `remote_trigger` without parsing human-readable log
+messages.
+
 Add `monitoring` at the top level of `/home/pi/schema.json`:
 
 ```json

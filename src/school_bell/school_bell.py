@@ -13,7 +13,7 @@ import sys
 from gpiozero import Buzzer
 from logging import Logger
 from threading import RLock, Thread
-from time import sleep
+from time import monotonic, sleep
 from typing import List, Union
 
 # Relative imports
@@ -384,10 +384,10 @@ class SchoolBell(object):
             ):
                 self.log.info(f"Testing GPIO {pin} ({index}/{total})")
                 try:
-                    buzzer.on()
+                    self._set_gpio_state(True, [pin], [buzzer])
                     sleep(duration)
                 finally:
-                    buzzer.off()
+                    self._set_gpio_state(False, [pin], [buzzer])
         finally:
             for buzzer in self.buzzer:
                 buzzer.off()
@@ -400,6 +400,52 @@ class SchoolBell(object):
             gpio_active_high=self.__buzz_active_high,
         )
         return True
+
+    def _set_gpio_state(
+        self,
+        active: bool,
+        pins: list = None,
+        buzzers: list = None,
+    ) -> None:
+        """Switch GPIO outputs and emit a structured state event."""
+        pins = list(self.__buzzer_pins if pins is None else pins)
+        buzzers = list(self.buzzer if buzzers is None else buzzers)
+        event = 'gpio_activated' if active else 'gpio_deactivated'
+        state = 'active' if active else 'inactive'
+        operation = 'on' if active else 'off'
+
+        error = None
+        for buzzer in buzzers:
+            try:
+                getattr(buzzer, operation)()
+            except Exception as err:
+                error = error or err
+                if active:
+                    break
+
+        if error is not None:
+            log_event(
+                self.log,
+                event,
+                status='failure',
+                level=40,
+                gpio_pins=pins,
+                gpio_active_high=self.__buzz_active_high,
+                gpio_state='unknown',
+                error_category=(
+                    'gpio_activation_error' if active
+                    else 'gpio_deactivation_error'
+                ),
+            )
+            raise error
+
+        log_event(
+            self.log,
+            event,
+            gpio_pins=pins,
+            gpio_active_high=self.__buzz_active_high,
+            gpio_state=state,
+        )
 
     @property
     def log(self):
@@ -689,12 +735,12 @@ class SchoolBell(object):
         wav = self.get_remote_wav(host, key)
         self.log.info(f"play remote wav {key}: {os.path.basename(wav)}")
 
-        success = _play_remote(
+        success = self._play_remote_monitored(
             host=host,
+            key=key,
             wav=wav,
             test=test,
             timeout=timeout or self.timeout,
-            logger=self.log
         )
 
         if not success:
@@ -703,6 +749,54 @@ class SchoolBell(object):
             raise RuntimeError(err)
         self.log.info("Play remote completed successfully.")
         return True
+
+    def _play_remote_monitored(
+        self,
+        host: str,
+        key: str,
+        wav: str,
+        test: bool = False,
+        timeout: int = None,
+    ) -> bool:
+        """Play remotely and report one structured result event."""
+        started = monotonic()
+        fields = {
+            'remote_host': str(host),
+            'wav_key': str(key),
+        }
+        try:
+            success = _play_remote(
+                host=host,
+                wav=wav,
+                test=test,
+                timeout=timeout or self.timeout,
+                logger=self.log,
+            )
+        except Exception:
+            fields['duration_seconds'] = round(monotonic() - started, 3)
+            log_event(
+                self.log,
+                'remote_trigger',
+                status='failure',
+                level=40,
+                error_category='remote_trigger_error',
+                **fields,
+            )
+            raise
+
+        fields['duration_seconds'] = round(monotonic() - started, 3)
+        if success:
+            log_event(self.log, 'remote_trigger', **fields)
+        else:
+            log_event(
+                self.log,
+                'remote_trigger',
+                status='failure',
+                level=40,
+                error_category='remote_trigger_error',
+                **fields,
+            )
+        return success
 
     def ring(self, key: str, **kwargs) -> bool:
         """Ring the school bell.
@@ -737,8 +831,8 @@ class SchoolBell(object):
         for host, root in self.trigger.items():
             remote_wav = self.get_wav(key, root)
             operations.append(
-                (_play_remote,
-                 (host, remote_wav, False, self.timeout, self.log))
+                (self._play_remote_monitored,
+                 (host, str(key), remote_wav, False, self.timeout))
             )
         operations.append(
             (_play, (wav, False, self.device, self.log))
@@ -755,8 +849,7 @@ class SchoolBell(object):
         try:
             if self.buzzer:
                 self.log.debug(".. buzzer on")
-                for buzzer in self.buzzer:
-                    buzzer.on()
+                self._set_gpio_state(True)
 
             for t in threads:
                 t.start()
@@ -797,8 +890,7 @@ class SchoolBell(object):
         finally:
             if self.buzzer:
                 self.log.debug(".. buzzer off")
-                for buzzer in self.buzzer:
-                    buzzer.off()
+                self._set_gpio_state(False)
 
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         with self.__state_lock:

@@ -159,6 +159,8 @@ field `timestamp`; use descending order for all tables containing that metric.
 | Failures by bell and type | `sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
 | Skipped bells | `sb_status:skipped` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_skip_reason`; metric: `count()`; range: 7 days |
 | Service restarts | `sb_event:service_started` | Data table | Row: `sb_device_id`; metrics: `count()`, `max(timestamp)`; range: 7 days |
+| GPIO activity | `sb_event:(gpio_activated OR gpio_deactivated)` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_gpio_state`, `sb_gpio_pins`; metric: `count()`; range: 24 hours |
+| Remote triggers | `sb_event:remote_trigger` | Data table | Rows: `sb_device_id`, `sb_remote_host`, `sb_status`; metrics: `count()`, `max(sb_duration_seconds)`; range: 7 days |
 | Recent events | `sb_application:school-bell` | Message table | Columns: `timestamp`, `sb_device_id`, `sb_event`, `sb_status`, `sb_message`; range: 24 hours |
 
 Place the two single-number widgets at the top, followed by the heartbeat and
@@ -191,6 +193,8 @@ sb_application:school-bell AND sb_status:failure
 sb_application:school-bell AND sb_event:audio_error
 sb_application:school-bell AND sb_event:calendar_error
 sb_application:school-bell AND sb_event:service_started
+sb_application:school-bell AND sb_event:remote_trigger AND sb_status:failure
+sb_application:school-bell AND sb_event:gpio_deactivated AND sb_status:failure
 ```
 
 To find version drift, create a table grouped by `sb_device_id` and
