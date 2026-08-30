@@ -315,6 +315,106 @@ def test_scheduled_ring_emits_remote_trigger_event(
     assert event['status'] == 'success'
 
 
+def test_scheduled_events_share_revision_and_trigger_context(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        config_hash='config-a',
+        schedule_hash='schedule-a',
+        monitoring={'device_id': 'bell-01'},
+    )
+    bell.trigger['pibell-02'] = '/remote/samples'
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(school_bell_module, '_play', lambda *args: True)
+    monkeypatch.setattr(
+        school_bell_module, '_play_remote', lambda **kwargs: True
+    )
+    context = {
+        'schedule_entry_id': 'entry-a',
+        'weekday': 'Monday',
+        'local_time': '08:30:00',
+    }
+
+    assert bell.ring('0', _schedule_context=context) is True
+
+    related = [
+        event for event in structured_events
+        if event['event'] in ('remote_trigger', 'bell_ring')
+    ]
+    assert len(related) == 2
+    assert {event['trigger_id'] for event in related} == {
+        related[0]['trigger_id']
+    }
+    for event in related:
+        assert event['config_hash'] == 'config-a'
+        assert event['schedule_hash'] == 'schedule-a'
+        assert event['schedule_entry_id'] == 'entry-a'
+        assert event['planned_at']
+        assert event['local_date']
+        assert event['weekday'] == 'Monday'
+        assert event['timezone']
+
+
+def test_holiday_skip_contains_scheduled_context(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        config_hash='config-a',
+        schedule_hash='schedule-a',
+        monitoring={'device_id': 'bell-01'},
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: True)
+
+    assert bell.ring('0', _schedule_context={
+        'schedule_entry_id': 'entry-a',
+        'weekday': 'Monday',
+        'local_time': '08:30:00',
+    }) is False
+
+    event = next(
+        event for event in structured_events
+        if event['event'] == 'bell_skipped_holiday'
+    )
+    assert event['trigger_id']
+    assert event['schedule_entry_id'] == 'entry-a'
+    assert event['config_hash'] == 'config-a'
+
+
+def test_schedule_entry_event_uses_canonical_day_time_and_wav_key(
+    structured_events
+):
+    school_bell_module.schedule.clear()
+    try:
+        bell = SchoolBell(
+            schedule={'Mon': {'8:30': 0}},
+            wav={'0': 'ClassBell-SoundBible.com-1426436341.wav'},
+            root=f"{getcwd()}/samples",
+            config_hash='config-a',
+            schedule_hash='schedule-a',
+        )
+    finally:
+        school_bell_module.schedule.clear()
+
+    event = next(
+        event for event in structured_events
+        if event['event'] == 'schedule_entry_loaded'
+    )
+    assert event['weekday'] == 'Monday'
+    assert event['local_time'] == '08:30:00'
+    assert event['wav_key'] == '0'
+    assert event['schedule_entry_id']
+    assert event['config_hash'] == 'config-a'
+    assert event['schedule_hash'] == 'schedule-a'
+    bell.close()
+
+
 def test_ring_fails_when_audio_output_fails(monkeypatch):
     bell = SchoolBell(
         schedule={},

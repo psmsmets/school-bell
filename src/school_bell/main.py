@@ -14,6 +14,7 @@ except (ValueError, ModuleNotFoundError, SyntaxError):
     version = "VERSION-NOT-FOUND"
 from .utils import init_logger, system_call
 from .school_bell import SchoolBell
+from .identifiers import content_hash
 
 # Set path of demo files
 share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
@@ -146,6 +147,10 @@ def main():
         if not isinstance(args.config[key], dict):
             err = f"JSON config '{key}' should be a dictionary!"
             raise TypeError(err)
+
+    # Hash the supplied JSON before adding command-line/runtime-only values.
+    args.config['config_hash'] = content_hash(args.config)
+    args.config['schedule_hash'] = content_hash(args.config['schedule'])
 
     # add some extra config keys
     args.config['test'] = args.test

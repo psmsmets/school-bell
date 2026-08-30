@@ -13,6 +13,7 @@ Add `monitoring` at the top level of `/home/pi/schema.json`, next to
 ```json
 {
   "root": "/home/pi/samples",
+  "timezone": "Europe/Brussels",
   "buzz_gpio": [26, 20],
   "buzz_active_high": false,
   "monitoring": {
@@ -43,6 +44,10 @@ Use the address of the Graylog server for `host`, and make `port` and
 or configure an explicit unique `device_id` if hostnames are not a suitable
 stable identity. Labels are optional, but make dashboard filtering per school,
 site, or zone easier.
+
+`timezone` controls both schedule evaluation and the timezone recorded in
+planned bell events. The default is `Europe/Brussels`; configuring it
+explicitly makes the intended wall-clock schedule unambiguous.
 
 The `status` section enables the optional read-only web service on the Pi.
 Binding it to `0.0.0.0` makes it reachable over the network, so use a bearer
@@ -118,6 +123,24 @@ One school:
 sb_application:school-bell AND sb_label_school:vito
 ```
 
+Configuration and scheduled bell events also expose these separate fields:
+
+```text
+sb_config_hash
+sb_schedule_hash
+sb_schedule_entry_id
+sb_trigger_id
+sb_planned_at
+sb_local_date
+sb_weekday
+sb_timezone
+```
+
+The hashes are calculated from canonical JSON before runtime-only command-line
+values are added. No raw configuration or monitoring credentials are sent.
+`schedule_entry_loaded` records form the searchable inventory of configured
+weekday/time/WAV combinations.
+
 ## 4. Send test events
 
 Test two simulated Raspberry Pis:
@@ -162,6 +185,11 @@ field `timestamp`; use descending order for all tables containing that metric.
 | GPIO activity | `sb_event:(gpio_activated OR gpio_deactivated)` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_gpio_state`, `sb_gpio_pins`; metric: `count()`; range: 24 hours |
 | Remote triggers | `sb_event:remote_trigger` | Data table | Rows: `sb_device_id`, `sb_remote_host`, `sb_status`; metrics: `count()`, `max(sb_duration_seconds)`; range: 7 days |
 | Recent events | `sb_application:school-bell` | Message table | Columns: `timestamp`, `sb_device_id`, `sb_event`, `sb_status`, `sb_message`; range: 24 hours |
+| Configuration revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_device_id`, `sb_config_hash`; metric: `max(timestamp)`; range: 30 days |
+| Schedule revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_schedule_hash`, `sb_device_id`; metric: `max(timestamp)`; range: 30 days |
+| Schedule inventory | `sb_event:schedule_entry_loaded` | Data table | Rows: `sb_device_id`, `sb_weekday`, `sb_local_time`, `sb_wav_key`, `sb_schedule_entry_id`; metric: `max(timestamp)`; range: 30 days |
+| Duplicate executions | `sb_event:bell_ring AND sb_trigger_id:*` | Data table | Row: `sb_trigger_id`; metrics: `count()`, `cardinality(sb_device_id)`; range: 7 days; investigate rows with count greater than 1 |
+| Planned failures | `sb_trigger_id:* AND sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_trigger_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
 
 Place the two single-number widgets at the top, followed by the heartbeat and
 version tables. Put the ring chart across the full dashboard width. The failure
@@ -174,7 +202,26 @@ Useful temporary filters in the dashboard search bar are:
 sb_device_id:vito-bell-01
 sb_label_school:vito
 sb_label_zone:main
+sb_schedule_hash:a54d...
+sb_schedule_entry_id:4c81...
+sb_trigger_id:83f2...
 ```
+
+To inspect all local and remote results belonging to one planned execution,
+filter on its `sb_trigger_id`. Create an aggregation event definition named
+**Duplicate bell execution** with query
+`sb_event:bell_ring AND sb_trigger_id:*`, group by `sb_trigger_id`, and trigger
+when `count()` is greater than 1. Create **Planned bell failed** with query
+`sb_event:bell_ring AND sb_status:failure AND sb_trigger_id:*`, grouped by
+`sb_device_id` and `sb_trigger_id`.
+
+Graylog can compare received executions with `schedule_entry_loaded`, but a
+completely absent execution produces no message to aggregate. A strict
+missing-bell alert therefore needs a central expected-execution generator (or
+Graylog event correlation) that combines the schedule inventory with calendar
+dates and checks for the expected `trigger_id`. Do not treat a zero-result
+message aggregation as sufficient unless the event definition is scheduled
+separately for every expected bell time.
 
 The **Bells reporting** number counts devices that sent a heartbeat in the last
 10 minutes. With the default five-minute heartbeat this tolerates one missed

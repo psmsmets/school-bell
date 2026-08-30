@@ -8,6 +8,7 @@ import os
 import re
 import requests
 import schedule
+import pytz
 import socket
 import sys
 from gpiozero import Buzzer
@@ -18,6 +19,7 @@ from typing import List, Union
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
+from .identifiers import schedule_entry_id, trigger_id
 from .monitoring import (
     StatusServer,
     configure_remote_syslog,
@@ -67,6 +69,9 @@ class SchoolBell(object):
         prog: str = None,
         info: str = None,
         monitoring: dict = None,
+        config_hash: str = None,
+        schedule_hash: str = None,
+        timezone: str = 'Europe/Brussels',
     ):
         """Initialize the SchoolBell object
         """
@@ -84,6 +89,13 @@ class SchoolBell(object):
         self.__last_ring = None
         self.__last_error = None
         self.__monitoring = monitoring or {}
+        self.__config_hash = config_hash
+        self.__schedule_hash = schedule_hash
+        try:
+            self.__timezone = pytz.timezone(timezone)
+        except (pytz.UnknownTimeZoneError, AttributeError):
+            raise ValueError(f'Unknown timezone: {timezone}')
+        self.__timezone_name = timezone
         self.__device_id = self.__monitoring.get(
             'device_id', self.__hostname
         )
@@ -141,6 +153,7 @@ class SchoolBell(object):
             self.log,
             'schedule_loaded',
             scheduled_jobs=self.scheduled_jobs,
+            **self._revision_fields(),
         )
         self._start_monitoring()
         self._configure_heartbeat()
@@ -160,6 +173,49 @@ class SchoolBell(object):
             len(times) for times in self.__schedule_config.values()
             if isinstance(times, dict)
         )
+
+    def _revision_fields(self) -> dict:
+        """Return configured revision identifiers when available."""
+        return {
+            key: value for key, value in {
+                'config_hash': self.__config_hash,
+                'schedule_hash': self.__schedule_hash,
+            }.items() if value is not None
+        }
+
+    def _execution_fields(self, context: dict = None) -> dict:
+        """Create stable fields for one scheduled execution."""
+        fields = self._revision_fields()
+        if not context:
+            return fields
+
+        now = datetime.datetime.now(self.__timezone)
+        hour, minute, second = map(int, context['local_time'].split(':'))
+        weekday_number = list(calendar.day_name).index(context['weekday'])
+        planned_date = now.date() - datetime.timedelta(
+            days=(now.weekday() - weekday_number) % 7
+        )
+        planned = self.__timezone.localize(
+            datetime.datetime.combine(
+                planned_date, datetime.time(hour, minute, second)
+            )
+        )
+        planned_at = planned.isoformat()
+        fields.update({
+            'schedule_entry_id': context['schedule_entry_id'],
+            'planned_at': planned_at,
+            'local_date': planned.date().isoformat(),
+            'weekday': context['weekday'],
+            'timezone': self.__timezone_name,
+        })
+        if self.__schedule_hash is not None:
+            fields['trigger_id'] = trigger_id(
+                self.__device_id,
+                self.__schedule_hash,
+                context['schedule_entry_id'],
+                planned_at,
+            )
+        return fields
 
     def _start_monitoring(self):
         config = self.__monitoring.get('status')
@@ -757,12 +813,14 @@ class SchoolBell(object):
         wav: str,
         test: bool = False,
         timeout: int = None,
+        event_fields: dict = None,
     ) -> bool:
         """Play remotely and report one structured result event."""
         started = monotonic()
         fields = {
             'remote_host': str(host),
             'wav_key': str(key),
+            **(event_fields or {}),
         }
         try:
             success = _play_remote(
@@ -803,6 +861,10 @@ class SchoolBell(object):
         Returns `True` on success.
         """
 
+        event_fields = self._execution_fields(
+            kwargs.pop('_schedule_context', None)
+        )
+
         if self.is_holiday():
             self.log.info("today is a holiday, no need to ring!")
             with self.__state_lock:
@@ -820,6 +882,7 @@ class SchoolBell(object):
                 status='skipped',
                 wav_key=str(key),
                 skip_reason='holiday',
+                **event_fields,
             )
             return False
 
@@ -832,7 +895,8 @@ class SchoolBell(object):
             remote_wav = self.get_wav(key, root)
             operations.append(
                 (self._play_remote_monitored,
-                 (host, str(key), remote_wav, False, self.timeout))
+                 (host, str(key), remote_wav, False, self.timeout,
+                  event_fields))
             )
         operations.append(
             (_play, (wav, False, self.device, self.log))
@@ -875,6 +939,7 @@ class SchoolBell(object):
                 level=40,
                 wav_key=str(key),
                 error_category='audio_playback_error',
+                **event_fields,
             )
             log_event(
                 self.log,
@@ -885,6 +950,7 @@ class SchoolBell(object):
                 gpio_pins=list(self.__buzzer_pins),
                 gpio_active_high=self.__buzz_active_high,
                 error_category='bell_error',
+                **event_fields,
             )
             raise
         finally:
@@ -906,6 +972,7 @@ class SchoolBell(object):
             wav_key=str(key),
             gpio_pins=list(self.__buzzer_pins),
             gpio_active_high=self.__buzz_active_high,
+            **event_fields,
         )
 
         self.log.debug(".. done")
@@ -932,6 +999,20 @@ class SchoolBell(object):
                 if not _validate_time(time, **kwargs):
                     continue
 
+                time_parts = [int(part) for part in time.split(':')]
+                if len(time_parts) == 2:
+                    time_parts.append(0)
+                canonical_time = datetime.time(*time_parts).isoformat()
+                canonical_weekday = calendar.day_name[day_num]
+                entry_id = schedule_entry_id(
+                    canonical_weekday, canonical_time, str(key)
+                )
+                context = {
+                    'schedule_entry_id': entry_id,
+                    'weekday': canonical_weekday,
+                    'local_time': canonical_time,
+                }
+
                 self.log.info(f"  ring every {day} at {time} with \"{key}\"")
 
                 wav = self.get_wav(key)
@@ -941,9 +1022,21 @@ class SchoolBell(object):
                     self.log.error(err)
                     raise FileNotFoundError(err)
 
-                eval(
-                    "schedule.every().{}.at(\"{}\").do(self.ring, key)"
-                    .format(day_name, time)
+                getattr(schedule.every(), day_name).at(
+                    canonical_time, self.__timezone_name
+                ).do(
+                    self.ring,
+                    str(key),
+                    _schedule_context=context,
+                )
+                log_event(
+                    self.log,
+                    'schedule_entry_loaded',
+                    schedule_entry_id=entry_id,
+                    weekday=canonical_weekday,
+                    local_time=canonical_time,
+                    wav_key=str(key),
+                    **self._revision_fields(),
                 )
 
     def run_schedule(self, _test_mode: bool = False):
