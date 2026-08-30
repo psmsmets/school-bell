@@ -1,0 +1,2181 @@
+{
+  "v": 1,
+  "id": "67aa20cd-0e96-4ea9-b02e-52aeb93a4e91",
+  "rev": 1,
+  "name": "School Bell Monitoring",
+  "summary": "Reusable monitoring for School Bell events received by any compatible RFC 5424 Syslog input.",
+  "description": "Installs a School Bell stream, exact application_name routing rule, JSON parsing pipeline, monitoring dashboard, and duplicate-execution and planned-failure event definitions. Requires an existing RFC 5424 UDP or TCP Syslog input.",
+  "vendor": "School Bell project",
+  "url": "https://github.com/psmsmets/school-bell",
+  "parameters": [],
+  "entities": [
+    {
+      "v": "1",
+      "type": {
+        "name": "pipeline",
+        "version": "1"
+      },
+      "id": "25131354-7f89-4fc4-8085-ee3f35afed5d",
+      "data": {
+        "title": {
+          "@type": "string",
+          "@value": "School Bell JSON Parsing"
+        },
+        "description": {
+          "@type": "string",
+          "@value": "Parses School Bell JSON payloads into searchable sb_* fields."
+        },
+        "source": {
+          "@type": "string",
+          "@value": "pipeline \"School Bell JSON Parsing\"\nstage 0 match pass\nrule \"parse School Bell structured syslog\"\nend"
+        },
+        "connected_streams": [
+          {
+            "@type": "string",
+            "@value": "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+          }
+        ]
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "dashboard",
+        "version": "2"
+      },
+      "id": "323385b1-5815-4893-aafa-abbdd2e38e21",
+      "data": {
+        "summary": {
+          "@type": "string",
+          "@value": ""
+        },
+        "search": {
+          "queries": [
+            {
+              "id": "7ac66e82-16d7-4f17-a489-ccb067d9ccb6",
+              "timerange": {
+                "from": 300,
+                "type": "relative"
+              },
+              "filters": [],
+              "query": {
+                "type": "elasticsearch",
+                "query_string": ""
+              },
+              "search_types": [
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:bell_ring"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "This week",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "142621c3-0e0b-4bfa-9cee-75a530e16941",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:bell_ring"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "range": 0,
+                    "type": "relative"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "bcfe01c7-aafa-432b-a800-d3727b02c697",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": null,
+                  "timerange": {
+                    "from": 600,
+                    "type": "relative"
+                  },
+                  "offset": 0,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "filter": null,
+                  "decorators": [],
+                  "type": "messages",
+                  "stream_categories": [],
+                  "id": "8f2283ff-bcfb-4a45-8ac3-02973507e4ce",
+                  "limit": 150,
+                  "filters": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:health_status"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "from": 600,
+                    "type": "relative"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "card",
+                      "id": "card(sb_device_id)",
+                      "field": "sb_device_id"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "2d88b43c-bf98-4532-8cb4-5ffe1fdd4b75",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "card",
+                      "id": "card(sb_device_id)",
+                      "field": "sb_device_id"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_config_hash"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "caf80088-92e9-477f-8247-c9cc57afeb77",
+                  "filters": [],
+                  "column_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:bell_ring AND sb_status:success"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "This week",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "time",
+                      "fields": [
+                        "timestamp"
+                      ],
+                      "interval": {
+                        "type": "auto",
+                        "scaling": 1
+                      }
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "9a46bc00-f74c-44e4-9809-855b0eb37857",
+                  "filters": [],
+                  "column_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "card",
+                      "id": "card(sb_schedule_hash)",
+                      "field": "sb_schedule_hash"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_schedule_hash"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "f5ce45db-6c8e-4e59-a2b2-6bf41e892b0d",
+                  "filters": [],
+                  "column_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [],
+                  "row_limit": null,
+                  "series": [],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": false
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_version"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "21ef48b4-779a-470f-bb41-e1e316b9b6c2",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "sb_version",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:bell_ring AND sb_status:success"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Last week",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "time",
+                      "fields": [
+                        "timestamp"
+                      ],
+                      "interval": {
+                        "type": "auto",
+                        "scaling": 1
+                      }
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "55d5b792-7bb0-4b6f-896e-17cd2487bead",
+                  "filters": [],
+                  "column_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_status:failure"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "599c93fb-b740-4d6b-868e-2ff4296a67d8",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Skipped",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id",
+                        "sb_skip_reason"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "c72c8da3-d49c-4dc3-ae40-3545ac59a9e5",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:service_started"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "a56080c2-fe73-46b2-91d2-e1bc0c4049be",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "sb_device_id",
+                      "direction": "Ascending"
+                    }
+                  ]
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "card",
+                      "id": "card(sb_device_id)",
+                      "field": "sb_device_id"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_version"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "a5fd9692-6fbe-4eef-a1fa-4a7ccf8f3d90",
+                  "filters": [],
+                  "column_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": ""
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "from": 86400,
+                    "type": "relative"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "max",
+                      "id": "Timestamp",
+                      "field": "timestamp"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id",
+                        "sb_config_hash_short",
+                        "sb_schedule_hash_short"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "9af02d38-4ac0-4421-a7f2-96483048c6c2",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": [
+                    {
+                      "type": "series",
+                      "field": "max(timestamp)",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_status:failure"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "This week",
+                    "timezone": "UTC",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "Failures",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id",
+                        "sb_event"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "3ca7cf90-bf03-49bb-89db-f51009676025",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "NOT sb_event:log OR NOT sb_event:health_status"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "keyword": "Today",
+                    "timezone": "Europe/Brussels",
+                    "type": "keyword"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": null,
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_event"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "974b33d7-f704-4460-be07-7a5c328c7a61",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": []
+                }
+              ]
+            }
+          ],
+          "parameters": [],
+          "requires": {},
+          "owner": "pieter",
+          "created_at": "2026-08-30T20:38:00.707Z"
+        },
+        "created_at": "2026-08-28T19:53:12.647Z",
+        "requires": {},
+        "state": {
+          "7ac66e82-16d7-4f17-a489-ccb067d9ccb6": {
+            "selected_fields": null,
+            "static_message_list_id": null,
+            "titles": {
+              "widget": {
+                "76d1608d-40d4-4094-84df-b03cd4a58799": "Installed versions",
+                "e5e153d8-f6cb-4f4f-89bf-5c11529d582a": "Failed events",
+                "bd386e7f-d471-453a-b90a-172f193cb302": "Events (except log or health status)",
+                "95f73a22-40a4-40bf-9135-a5aa22c0f2f0": "Schedule hashes",
+                "9d802cb8-9f0b-4200-89b4-5371ddde5a1d": "Skipped Bells",
+                "f6df1198-8769-4c14-a2a2-782c7a245f88": "Successful rings (last week)",
+                "948cd62c-b4bc-4046-87d8-adf83082eebd": "Installed version",
+                "e9f216e5-d5bb-4a34-be75-8920f6e30b6e": "Service restarts by device",
+                "ab5d00ad-65e1-495a-8a66-7ad0c73df030": "Bell rings",
+                "74610289-bc18-4f8e-9e7d-6a50f6cc4757": "Last heartbeat per bell",
+                "d73d123f-eb88-494a-b0b1-3000345f9ff0": "Failures by bell and type",
+                "f0c7741b-281a-441d-bc01-39c6eedea836": "Bells rings",
+                "add78d4f-c298-414c-8a9f-cc7830cdd76d": "Successful rings (this week)",
+                "57d8815e-a91e-4d20-b545-7fce49f6a91b": "School Bells reporting",
+                "9f1bfb6b-dfdb-4490-80ba-4d2c3d6f970f": "School Bell Message Table",
+                "200fab9c-acc1-4720-a71e-2c026c37a7ed": "Config hashes"
+              },
+              "tab": {
+                "title": "Overview "
+              }
+            },
+            "widgets": [
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id",
+                        "sb_config_hash_short",
+                        "sb_schedule_hash_short"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Timestamp",
+                        "thresholds": []
+                      },
+                      "function": "max(timestamp)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [
+                      "sb_device_id"
+                    ],
+                    "show_row_numbers": false
+                  },
+                  "formatting_settings": null,
+                  "sort": [
+                    {
+                      "type": "series",
+                      "field": "max(timestamp)",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "from": 86400,
+                  "type": "relative"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "74610289-bc18-4f8e-9e7d-6a50f6cc4757",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_event"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "NOT sb_event:log OR NOT sb_event:health_status"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "bd386e7f-d471-453a-b90a-172f193cb302",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "trend": false,
+                    "trend_preference": "NEUTRAL"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:bell_ring"
+                },
+                "context": null,
+                "timerange": {
+                  "range": 0,
+                  "type": "relative"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "ab5d00ad-65e1-495a-8a66-7ad0c73df030",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": 15,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_version"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "",
+                        "thresholds": []
+                      },
+                      "function": "card(sb_device_id)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "76d1608d-40d4-4094-84df-b03cd4a58799",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id",
+                        "sb_event"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Failures",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [],
+                    "show_row_numbers": true
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_status:failure"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "This week",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "d73d123f-eb88-494a-b0b1-3000345f9ff0",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": 15,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "timestamp"
+                      ],
+                      "type": "time",
+                      "config": {
+                        "interval": {
+                          "type": "auto",
+                          "scaling": 1
+                        }
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": false
+                      }
+                    }
+                  ],
+                  "visualization_config": {
+                    "barmode": "group",
+                    "axis_type": "linear"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:bell_ring AND sb_status:success"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Last week",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "f6df1198-8769-4c14-a2a2-782c7a245f88",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "fields": [
+                    "timestamp",
+                    "sb_device_id",
+                    "sb_event",
+                    "sb_status",
+                    "sb_message"
+                  ],
+                  "units": {},
+                  "show_message_row": false,
+                  "show_summary": false,
+                  "decorators": [],
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "timestamp",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "from": 600,
+                  "type": "relative"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "messages",
+                "stream_categories": [],
+                "id": "9f1bfb6b-dfdb-4490-80ba-4d2c3d6f970f",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": 15,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "timestamp"
+                      ],
+                      "type": "time",
+                      "config": {
+                        "interval": {
+                          "type": "auto",
+                          "scaling": 1
+                        }
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": false
+                      }
+                    }
+                  ],
+                  "visualization_config": {
+                    "barmode": "group",
+                    "axis_type": "linear"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:bell_ring AND sb_status:success"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "This week",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "add78d4f-c298-414c-8a9f-cc7830cdd76d",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "count",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [],
+                    "show_row_numbers": true
+                  },
+                  "formatting_settings": null,
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "sb_device_id",
+                      "direction": "Ascending"
+                    }
+                  ]
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:service_started"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "e9f216e5-d5bb-4a34-be75-8920f6e30b6e",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "card(sb_device_id)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "trend": false,
+                    "trend_preference": "NEUTRAL"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:health_status"
+                },
+                "context": null,
+                "timerange": {
+                  "from": 600,
+                  "type": "relative"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "57d8815e-a91e-4d20-b545-7fce49f6a91b",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50
+                      }
+                    },
+                    {
+                      "fields": [
+                        "sb_version"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": false
+                      }
+                    }
+                  ],
+                  "series": [],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [],
+                    "show_row_numbers": true
+                  },
+                  "formatting_settings": null,
+                  "sort": [
+                    {
+                      "type": "pivot",
+                      "field": "sb_version",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "948cd62c-b4bc-4046-87d8-adf83082eebd",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": 15,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_config_hash"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "",
+                        "thresholds": []
+                      },
+                      "function": "card(sb_device_id)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "200fab9c-acc1-4720-a71e-2c026c37a7ed",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": 15,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_schedule_hash"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "card(sb_schedule_hash)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "Europe/Brussels",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "95f73a22-40a4-40bf-9135-a5aa22c0f2f0",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "trend": false,
+                    "trend_preference": "NEUTRAL"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:bell_ring"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "This week",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "f0c7741b-281a-441d-bc01-39c6eedea836",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": null,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": null,
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "trend": false,
+                    "trend_preference": "NEUTRAL"
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_status:failure"
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "e5e153d8-f6cb-4f4f-89bf-5c11529d582a",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id",
+                        "sb_skip_reason"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Skipped",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [],
+                    "show_row_numbers": true
+                  },
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": ""
+                },
+                "context": null,
+                "timerange": {
+                  "keyword": "Today",
+                  "timezone": "UTC",
+                  "type": "keyword"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "9d802cb8-9f0b-4200-89b4-5371ddde5a1d",
+                "filters": [],
+                "description": null
+              }
+            ],
+            "widget_mapping": {
+              "76d1608d-40d4-4094-84df-b03cd4a58799": [
+                "a5fd9692-6fbe-4eef-a1fa-4a7ccf8f3d90"
+              ],
+              "e5e153d8-f6cb-4f4f-89bf-5c11529d582a": [
+                "599c93fb-b740-4d6b-868e-2ff4296a67d8"
+              ],
+              "bd386e7f-d471-453a-b90a-172f193cb302": [
+                "974b33d7-f704-4460-be07-7a5c328c7a61"
+              ],
+              "95f73a22-40a4-40bf-9135-a5aa22c0f2f0": [
+                "f5ce45db-6c8e-4e59-a2b2-6bf41e892b0d"
+              ],
+              "9d802cb8-9f0b-4200-89b4-5371ddde5a1d": [
+                "c72c8da3-d49c-4dc3-ae40-3545ac59a9e5"
+              ],
+              "f6df1198-8769-4c14-a2a2-782c7a245f88": [
+                "55d5b792-7bb0-4b6f-896e-17cd2487bead"
+              ],
+              "948cd62c-b4bc-4046-87d8-adf83082eebd": [
+                "21ef48b4-779a-470f-bb41-e1e316b9b6c2"
+              ],
+              "e9f216e5-d5bb-4a34-be75-8920f6e30b6e": [
+                "a56080c2-fe73-46b2-91d2-e1bc0c4049be"
+              ],
+              "ab5d00ad-65e1-495a-8a66-7ad0c73df030": [
+                "bcfe01c7-aafa-432b-a800-d3727b02c697"
+              ],
+              "74610289-bc18-4f8e-9e7d-6a50f6cc4757": [
+                "9af02d38-4ac0-4421-a7f2-96483048c6c2"
+              ],
+              "d73d123f-eb88-494a-b0b1-3000345f9ff0": [
+                "3ca7cf90-bf03-49bb-89db-f51009676025"
+              ],
+              "f0c7741b-281a-441d-bc01-39c6eedea836": [
+                "142621c3-0e0b-4bfa-9cee-75a530e16941"
+              ],
+              "add78d4f-c298-414c-8a9f-cc7830cdd76d": [
+                "9a46bc00-f74c-44e4-9809-855b0eb37857"
+              ],
+              "57d8815e-a91e-4d20-b545-7fce49f6a91b": [
+                "2d88b43c-bf98-4532-8cb4-5ffe1fdd4b75"
+              ],
+              "9f1bfb6b-dfdb-4490-80ba-4d2c3d6f970f": [
+                "8f2283ff-bcfb-4a45-8ac3-02973507e4ce"
+              ],
+              "200fab9c-acc1-4720-a71e-2c026c37a7ed": [
+                "caf80088-92e9-477f-8247-c9cc57afeb77"
+              ]
+            },
+            "positions": {
+              "76d1608d-40d4-4094-84df-b03cd4a58799": {
+                "col": 9,
+                "row": 17,
+                "height": 3,
+                "width": 4
+              },
+              "e5e153d8-f6cb-4f4f-89bf-5c11529d582a": {
+                "col": 4,
+                "row": 1,
+                "height": 3,
+                "width": 3
+              },
+              "bd386e7f-d471-453a-b90a-172f193cb302": {
+                "col": 9,
+                "row": 13,
+                "height": 4,
+                "width": 4
+              },
+              "95f73a22-40a4-40bf-9135-a5aa22c0f2f0": {
+                "col": 1,
+                "row": 17,
+                "height": 3,
+                "width": 4
+              },
+              "9d802cb8-9f0b-4200-89b4-5371ddde5a1d": {
+                "col": 9,
+                "row": 10,
+                "height": 3,
+                "width": 4
+              },
+              "f6df1198-8769-4c14-a2a2-782c7a245f88": {
+                "col": 1,
+                "row": 7,
+                "height": 3,
+                "width": "Infinity"
+              },
+              "948cd62c-b4bc-4046-87d8-adf83082eebd": {
+                "col": 9,
+                "row": 20,
+                "height": 3,
+                "width": 4
+              },
+              "e9f216e5-d5bb-4a34-be75-8920f6e30b6e": {
+                "col": 9,
+                "row": 23,
+                "height": 3,
+                "width": 4
+              },
+              "ab5d00ad-65e1-495a-8a66-7ad0c73df030": {
+                "col": 10,
+                "row": 1,
+                "height": 3,
+                "width": 3
+              },
+              "74610289-bc18-4f8e-9e7d-6a50f6cc4757": {
+                "col": 1,
+                "row": 10,
+                "height": 4,
+                "width": 8
+              },
+              "d73d123f-eb88-494a-b0b1-3000345f9ff0": {
+                "col": 1,
+                "row": 14,
+                "height": 3,
+                "width": 8
+              },
+              "f0c7741b-281a-441d-bc01-39c6eedea836": {
+                "col": 7,
+                "row": 1,
+                "height": 3,
+                "width": 3
+              },
+              "add78d4f-c298-414c-8a9f-cc7830cdd76d": {
+                "col": 1,
+                "row": 4,
+                "height": 3,
+                "width": "Infinity"
+              },
+              "57d8815e-a91e-4d20-b545-7fce49f6a91b": {
+                "col": 1,
+                "row": 1,
+                "height": 3,
+                "width": 3
+              },
+              "9f1bfb6b-dfdb-4490-80ba-4d2c3d6f970f": {
+                "col": 1,
+                "row": 20,
+                "height": 6,
+                "width": 8
+              },
+              "200fab9c-acc1-4720-a71e-2c026c37a7ed": {
+                "col": 5,
+                "row": 17,
+                "height": 3,
+                "width": 4
+              }
+            },
+            "formatting": {
+              "highlighting": []
+            },
+            "display_mode_settings": {
+              "positions": {}
+            }
+          }
+        },
+        "properties": [],
+        "title": {
+          "@type": "string",
+          "@value": "School Bell Overview"
+        },
+        "type": "DASHBOARD",
+        "description": {
+          "@type": "string",
+          "@value": ""
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "pipeline_rule",
+        "version": "1"
+      },
+      "id": "01018f99-a0a5-4731-a0fa-0e14707616f6",
+      "data": {
+        "title": {
+          "@type": "string",
+          "@value": "parse School Bell structured syslog"
+        },
+        "description": {
+          "@type": "string",
+          "@value": "parse School Bell structured syslog"
+        },
+        "source": {
+          "@type": "string",
+          "@value": "rule \"parse School Bell structured syslog\"\nwhen\n  has_field(\"message\") &&\n  has_field(\"application_name\") &&\n  to_string($message.application_name) == \"school-bell\"\nthen\n  let json_message = regex_replace(\n    pattern: \"^[^{]*\",\n    value: to_string($message.message),\n    replacement: \"\"\n  );\n  let parsed = parse_json(json_message);\n  let fields = to_map(parsed);\n  set_fields(fields: fields, prefix: \"sb_\");\nend"
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "stream",
+        "version": "1"
+      },
+      "id": "b38dada1-d09d-44f0-b5ef-f4158576c6e0",
+      "data": {
+        "alarm_callbacks": [],
+        "outputs": [],
+        "remove_matches": {
+          "@type": "boolean",
+          "@value": false
+        },
+        "title": {
+          "@type": "string",
+          "@value": "School Bell"
+        },
+        "stream_rules": [
+          {
+            "type": {
+              "@type": "string",
+              "@value": "EXACT"
+            },
+            "field": {
+              "@type": "string",
+              "@value": "application_name"
+            },
+            "value": {
+              "@type": "string",
+              "@value": "school-bell"
+            },
+            "inverted": {
+              "@type": "boolean",
+              "@value": false
+            },
+            "description": {
+              "@type": "string",
+              "@value": "Match RFC 5424 School Bell messages from any compatible Syslog input."
+            }
+          }
+        ],
+        "alert_conditions": [],
+        "matching_type": {
+          "@type": "string",
+          "@value": "AND"
+        },
+        "disabled": {
+          "@type": "boolean",
+          "@value": false
+        },
+        "description": {
+          "@type": "string",
+          "@value": "School Bell monitoring messages"
+        },
+        "default_stream": {
+          "@type": "boolean",
+          "@value": false
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "event_definition",
+        "version": "1"
+      },
+      "id": "dfcfb55e-e8f3-4ed1-b543-fbe533a8a20e",
+      "data": {
+        "_scope": {
+          "@type": "string",
+          "@value": "DEFAULT"
+        },
+        "title": {
+          "@type": "string",
+          "@value": "Duplicate bell execution"
+        },
+        "description": {
+          "@type": "string",
+          "@value": "Detects more than one bell_ring event for the same planned trigger."
+        },
+        "remediation_steps": {
+          "@type": "string",
+          "@value": "Inspect the matching School Bell messages by trigger ID and device ID."
+        },
+        "priority": {
+          "@type": "integer",
+          "@value": 2
+        },
+        "alert": {
+          "@type": "boolean",
+          "@value": true
+        },
+        "config": {
+          "type": "aggregation-v1",
+          "query": {
+            "@type": "string",
+            "@value": "sb_event:bell_ring AND sb_trigger_id:*"
+          },
+          "query_parameters": [],
+          "filters": [],
+          "streams": [
+            "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+          ],
+          "stream_categories": [],
+          "group_by": [
+            "sb_trigger_id"
+          ],
+          "series": [
+            {
+              "id": "count()",
+              "function": "count",
+              "field": null
+            }
+          ],
+          "conditions": {
+            "expression": {
+              "expr": ">",
+              "left": {
+                "expr": "number-ref",
+                "ref": "count()"
+              },
+              "right": {
+                "expr": "number",
+                "value": 1.0
+              }
+            }
+          },
+          "search_within_ms": 300000,
+          "execute_every_ms": 300000,
+          "use_cron_scheduling": false,
+          "cron_expression": null,
+          "cron_timezone": null,
+          "event_limit": 100
+        },
+        "field_spec": {},
+        "key_spec": [],
+        "notification_settings": {
+          "grace_period_ms": 300000,
+          "backlog_size": 0
+        },
+        "notifications": [],
+        "storage": [],
+        "tags": [
+          "school-bell"
+        ],
+        "is_scheduled": {
+          "@type": "boolean",
+          "@value": true
+        },
+        "event_procedure": null,
+        "event_summary_template": null,
+        "tactics_techniques": []
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    },
+    {
+      "v": "1",
+      "type": {
+        "name": "event_definition",
+        "version": "1"
+      },
+      "id": "bc493532-b801-4bba-9254-d8a3df6883b4",
+      "data": {
+        "_scope": {
+          "@type": "string",
+          "@value": "DEFAULT"
+        },
+        "title": {
+          "@type": "string",
+          "@value": "Planned bell failed"
+        },
+        "description": {
+          "@type": "string",
+          "@value": "Detects failed planned bell executions."
+        },
+        "remediation_steps": {
+          "@type": "string",
+          "@value": "Inspect the matching School Bell messages by trigger ID and device ID."
+        },
+        "priority": {
+          "@type": "integer",
+          "@value": 2
+        },
+        "alert": {
+          "@type": "boolean",
+          "@value": true
+        },
+        "config": {
+          "type": "aggregation-v1",
+          "query": {
+            "@type": "string",
+            "@value": "sb_event:bell_ring AND sb_status:failure AND sb_trigger_id:*"
+          },
+          "query_parameters": [],
+          "filters": [],
+          "streams": [
+            "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+          ],
+          "stream_categories": [],
+          "group_by": [
+            "sb_device_id",
+            "sb_trigger_id"
+          ],
+          "series": [
+            {
+              "id": "count()",
+              "function": "count",
+              "field": null
+            }
+          ],
+          "conditions": {
+            "expression": {
+              "expr": ">",
+              "left": {
+                "expr": "number-ref",
+                "ref": "count()"
+              },
+              "right": {
+                "expr": "number",
+                "value": 0.0
+              }
+            }
+          },
+          "search_within_ms": 300000,
+          "execute_every_ms": 300000,
+          "use_cron_scheduling": false,
+          "cron_expression": null,
+          "cron_timezone": null,
+          "event_limit": 100
+        },
+        "field_spec": {},
+        "key_spec": [],
+        "notification_settings": {
+          "grace_period_ms": 300000,
+          "backlog_size": 0
+        },
+        "notifications": [],
+        "storage": [],
+        "tags": [
+          "school-bell"
+        ],
+        "is_scheduled": {
+          "@type": "boolean",
+          "@value": true
+        },
+        "event_procedure": null,
+        "event_summary_template": null,
+        "tactics_techniques": []
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.0.12+646c688"
+        }
+      ]
+    }
+  ]
+}

@@ -1,82 +1,27 @@
 # Graylog setup for School Bell
 
-This directory configures one central Graylog syslog input for any number of
-School Bell Raspberry Pis. The device ID defaults to the hostname. Set
-`monitoring.device_id` only when a separate, stable monitoring identity is
-needed.
+This directory contains the Graylog-specific input helper, reusable content
+pack, parsing rule, test sender and dashboard reference. See the parent
+[`monitoring/README.md`](../README.md) for School Bell monitoring configuration,
+device identity, the HTTP status service and service management.
 
-## 1. Configure each Raspberry Pi
+## Reusable content pack
 
-Add `monitoring` at the top level of `/home/pi/schema.json`, next to
-`schedule`, `wav`, `buzz_gpio`, and the other School Bell settings:
+[`school-bell-monitoring-content-pack.json`](school-bell-monitoring-content-pack.json)
+installs the **School Bell Monitoring** content pack without parameters. It
+contains the School Bell stream, an exact `application_name=school-bell`
+stream rule, the JSON parsing pipeline and rule, the pipeline-to-stream
+connection, the monitoring dashboard, and event definitions for duplicate
+executions and failed planned bells.
 
-```json
-{
-  "root": "/home/pi/samples",
-  "timezone": "Europe/Brussels",
-  "buzz_gpio": [26, 20],
-  "buzz_active_high": false,
-  "monitoring": {
-    "labels": {
-      "school": "vito",
-      "zone": "main"
-    },
-    "heartbeat_interval": 300,
-    "syslog": {
-      "host": "192.168.88.90",
-      "port": 1514,
-      "protocol": "udp",
-      "facility": "daemon"
-    },
-    "status": {
-      "enabled": true,
-      "host": "0.0.0.0",
-      "port": 8080,
-      "token": "replace-with-a-secret",
-      "include_systemd": true
-    }
-  }
-}
-```
+The pack deliberately contains no Syslog input, input-specific routing rule,
+notification, credential, or environment-specific setting. Before installing
+it, configure any Graylog RFC 5424 UDP or TCP Syslog input to receive School
+Bell events. Content-pack UUIDs in the file are portable dependency keys that
+Graylog resolves to newly installed native entity IDs; the file contains no
+fixed native Graylog object IDs.
 
-Use the address of the Graylog server for `host`, and make `port` and
-`protocol` match the active Graylog Syslog input. Make every hostname unique,
-or configure an explicit unique `device_id` if hostnames are not a suitable
-stable identity. Labels are optional, but make dashboard filtering per school,
-site, or zone easier.
-
-`timezone` controls both schedule evaluation and the timezone recorded in
-planned bell events. The default is `Europe/Brussels`; configuring it
-explicitly makes the intended wall-clock schedule unambiguous.
-
-The `status` section enables the optional read-only web service on the Pi.
-Binding it to `0.0.0.0` makes it reachable over the network, so use a bearer
-token and restrict port 8080 to the management network where possible. Check
-both endpoints with:
-
-```sh
-curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/status
-curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/health
-```
-
-`/status` returns the version, uptime, schedule, GPIO pins, last ring, last
-error, and an optional safe subset of systemd state. `/health` returns HTTP 200
-while the scheduler is healthy and HTTP 503 when it is unhealthy. Omit the
-complete `status` section to disable the web service.
-
-Restart School Bell after changing the configuration:
-
-```sh
-sudo systemctl restart school-bell.service
-sudo journalctl -u school-bell.service -n 50 --no-pager
-```
-
-With the default interval, a `health_status` heartbeat should appear in
-Graylog within five minutes.
-
-## 2. Create the input
+## 1. Create the input
 
 Create a Graylog access token with permission to manage inputs, then run:
 
@@ -88,22 +33,17 @@ export GRAYLOG_INPUT_PORT=1514
 ```
 
 The script creates a global UDP Syslog input. Set `GRAYLOG_PROTOCOL=tcp` for a
-TCP input. Ensure the selected port is allowed by the Graylog host firewall.
+TCP input. Ensure the selected port is allowed by the Graylog host firewall and
+make the School Bell Syslog host, port and protocol match this input.
 
-## 3. Extract the JSON fields
+## 2. Verify JSON parsing
 
-Create a pipeline in Graylog, add the rule from
-[`pipeline-rule.conf`](pipeline-rule.conf), and connect the pipeline to the
-dedicated School Bell stream. Graylog 7 retains the RFC5424 message ID and
+The content pack connects its JSON parsing pipeline to the dedicated School
+Bell stream. [`pipeline-rule.conf`](pipeline-rule.conf) contains the same rule
+for reference or manual setup. Graylog 7 can retain the RFC 5424 message ID and
 structured-data marker in `message` (for example `health_status - {...}`). The
-rule recognizes `application_name=school-bell`, strips everything before the
-first JSON opening brace, and turns the remaining JSON stored in
-the syslog `message` field into directly searchable Graylog fields. Extracted
-fields use the `sb_` prefix to avoid conflicts with Graylog's reserved
-`message`, `level`, and `timestamp` fields. The original syslog fields and raw
-JSON message are deliberately retained alongside the extracted fields. This
-makes troubleshooting the input and pipeline possible without losing the
-original record.
+rule strips everything before the first JSON opening brace and exposes the JSON
+properties as searchable `sb_*` fields while retaining the original message.
 
 The common query for all bells is:
 
@@ -138,15 +78,10 @@ sb_weekday
 sb_timezone
 ```
 
-The hashes are calculated from canonical JSON before runtime-only command-line
-values are added. No raw configuration or monitoring credentials are sent.
-The `_short` fields contain the first 12 hexadecimal characters for compact
-dashboard display only. Keep using the complete hashes for exact filters,
-grouping, alerts and automation.
-`schedule_entry_loaded` records form the searchable inventory of configured
-weekday/time/WAV combinations.
+The `_short` fields are intended for compact dashboard display. Use complete
+hashes for exact Graylog filters, grouping, alerts and automation.
 
-## 4. Send test events
+## 3. Send test events
 
 Test two simulated Raspberry Pis:
 
@@ -166,105 +101,11 @@ Both use an RFC5424 header, so Graylog's native `source` field contains the
 Raspberry Pi hostname. Graylog 7 may retain RFC5424 metadata before the JSON in
 `message`; the supplied pipeline strips it before parsing.
 
-## 5. Graylog 7 dashboard
+With the default heartbeat interval, a `health_status` event from each
+configured School Bell should appear in Graylog within five minutes.
 
-Create a dashboard named **School Bell Overview** and select the School Bell
-stream. Use a default time range of 24 hours. Every widget has its own query,
-so the dashboard search bar can still be used as a temporary additional filter
-for a device, school or zone.
+## 4. Dashboard
 
-Add the following widgets. `max(timestamp)` means metric function `max` with
-field `timestamp`; use descending order for all tables containing that metric.
-
-| Widget | Widget query | Visualization | Grouping and metric |
-|---|---|---|---|
-| Bells reporting | `sb_event:health_status` | Single number | `cardinality(sb_device_id)`; relative range: 10 minutes |
-| Failed events | `sb_status:failure` | Single number | `count()`; relative range: 24 hours |
-| Last heartbeat per bell | `sb_event:health_status` | Data table | Rows: `sb_device_id`, `sb_status`, `sb_version`; metric: `max(timestamp)`; range: 24 hours |
-| Installed versions | `sb_event:health_status` | Data table | Rows: `sb_version`, `sb_device_id`; metric: `max(timestamp)`; range: 24 hours |
-| Successful rings | `sb_event:bell_ring AND sb_status:success` | Bar chart | Row: `timestamp` with automatic interval; series/group: `sb_device_id`; metric: `count()`; range: 7 days |
-| Last successful ring | `sb_event:bell_ring AND sb_status:success` | Data table | Row: `sb_device_id`; metric: `max(timestamp)`; range: 7 days |
-| Failures by bell and type | `sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
-| Skipped bells | `sb_status:skipped` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_skip_reason`; metric: `count()`; range: 7 days |
-| Service restarts | `sb_event:service_started` | Data table | Row: `sb_device_id`; metrics: `count()`, `max(timestamp)`; range: 7 days |
-| GPIO activity | `sb_event:(gpio_activated OR gpio_deactivated)` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_gpio_state`, `sb_gpio_pins`; metric: `count()`; range: 24 hours |
-| Remote triggers | `sb_event:remote_trigger` | Data table | Rows: `sb_device_id`, `sb_remote_host`, `sb_status`; metrics: `count()`, `max(sb_duration_seconds)`; range: 7 days |
-| Recent events | `sb_application:school-bell` | Message table | Columns: `timestamp`, `sb_device_id`, `sb_event`, `sb_status`, `sb_message`; range: 24 hours |
-| Configuration revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_device_id`, `sb_config_hash_short`; metric: `max(timestamp)`; range: 30 days |
-| Schedule revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_schedule_hash_short`, `sb_device_id`; metric: `max(timestamp)`; range: 30 days |
-| Schedule inventory | `sb_event:schedule_entry_loaded` | Data table | Rows: `sb_device_id`, `sb_weekday`, `sb_local_time`, `sb_wav_key`, `sb_schedule_entry_id`; metric: `max(timestamp)`; range: 30 days |
-| Duplicate executions | `sb_event:bell_ring AND sb_trigger_id:*` | Data table | Row: `sb_trigger_id`; metrics: `count()`, `cardinality(sb_device_id)`; range: 7 days; investigate rows with count greater than 1 |
-| Planned failures | `sb_trigger_id:* AND sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_trigger_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
-
-Place the two single-number widgets at the top, followed by the heartbeat and
-version tables. Put the ring chart across the full dashboard width. The failure
-and recent-event tables belong at the bottom because they are primarily used
-for investigation.
-
-Useful temporary filters in the dashboard search bar are:
-
-```text
-sb_device_id:vito-bell-01
-sb_label_school:vito
-sb_label_zone:main
-sb_schedule_hash:a54d...
-sb_schedule_entry_id:4c81...
-sb_trigger_id:83f2...
-```
-
-To inspect all local and remote results belonging to one planned execution,
-filter on its `sb_trigger_id`. Create an aggregation event definition named
-**Duplicate bell execution** with query
-`sb_event:bell_ring AND sb_trigger_id:*`, group by `sb_trigger_id`, and trigger
-when `count()` is greater than 1. Create **Planned bell failed** with query
-`sb_event:bell_ring AND sb_status:failure AND sb_trigger_id:*`, grouped by
-`sb_device_id` and `sb_trigger_id`.
-
-Graylog can compare received executions with `schedule_entry_loaded`, but a
-completely absent execution produces no message to aggregate. A strict
-missing-bell alert therefore needs a central expected-execution generator (or
-Graylog event correlation) that combines the schedule inventory with calendar
-dates and checks for the expected `trigger_id`. Do not treat a zero-result
-message aggregation as sufficient unless the event definition is scheduled
-separately for every expected bell time.
-
-The **Bells reporting** number counts devices that sent a heartbeat in the last
-10 minutes. With the default five-minute heartbeat this tolerates one missed
-message. It is a quick overview, not yet an offline alert; create the event
-definition below for notifications.
-
-For an offline-device alert, create an event definition that checks whether a
-device has not produced any message within the expected interval. Graylog's
-exact event-definition workflow varies by version; group the aggregation by
-`sb_device_id` and alert when the latest Graylog `timestamp` is too old.
-
-Useful alert queries include:
-
-```text
-sb_application:school-bell AND sb_status:failure
-sb_application:school-bell AND sb_event:audio_error
-sb_application:school-bell AND sb_event:calendar_error
-sb_application:school-bell AND sb_event:service_started
-sb_application:school-bell AND sb_event:remote_trigger AND sb_status:failure
-sb_application:school-bell AND sb_event:gpio_deactivated AND sb_status:failure
-```
-
-To find version drift, create a table grouped by `sb_device_id` and
-`sb_version`, or
-search for devices not running the expected version:
-
-```text
-sb_application:school-bell AND NOT sb_version:1.2.3
-```
-
-In Graylog 7, create a widget with **Create (+) → Aggregation**, open **Edit**,
-enter its widget-specific query, and configure Visualization, Grouping and
-Metrics according to the table above. Set the widget's stream to **School
-Bell**, preview it and select **Update widget**. See the official [dashboard documentation](https://go2docs.graylog.org/current/interacting_with_your_log_data/dashboards.html)
-and [widget documentation](https://go2docs.graylog.org/current/interacting_with_your_log_data/widgets.html).
-
-Official references:
-
-- [Graylog REST API](https://go2docs.graylog.org/current/setting_up_graylog/rest_api.html)
-- [Graylog dashboards](https://go2docs.graylog.org/current/interacting_with_your_log_data/dashboards.html)
-- [Graylog widgets](https://go2docs.graylog.org/current/interacting_with_your_log_data/widgets.html)
+The content pack installs the **School Bell Overview** dashboard and its event
+definitions. See [`DASHBOARD.md`](DASHBOARD.md) for the complete widget and
+query reference when building or customizing a dashboard manually.
