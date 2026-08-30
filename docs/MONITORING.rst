@@ -68,7 +68,9 @@ Every remote record includes stable fields suitable for Graylog indexing:
         "label_school": "vito",
         "label_zone": "main",
         "config_hash": "f72a...",
+        "config_hash_short": "f72a93cb815c",
         "schedule_hash": "a54d...",
+        "schedule_hash_short": "a54d92730b64",
         "schedule_entry_id": "4c81...",
         "trigger_id": "83f2...",
         "planned_at": "2026-09-07T08:30:00+02:00",
@@ -93,6 +95,9 @@ monitoring can add ``bell_skipped_calendar``, ``calendar_refresh`` and
 ``schedule_hash`` identifies only its ``schedule`` section. Both are computed
 from canonical JSON before runtime-only values are added. Scheduled results
 share a ``trigger_id`` across local, remote, skipped and failed events.
+Their corresponding ``config_hash_short`` and ``schedule_hash_short`` fields
+contain the first 12 characters for display only; exact comparisons continue
+to use the complete hashes.
 ``schedule_entry_loaded`` exposes the non-sensitive weekday, time, WAV key and
 stable entry identifier needed to inventory expected schedule entries. Raw
 configuration values and credentials are never included in these events.

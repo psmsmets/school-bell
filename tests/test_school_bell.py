@@ -352,11 +352,15 @@ def test_scheduled_events_share_revision_and_trigger_context(
     for event in related:
         assert event['config_hash'] == 'config-a'
         assert event['schedule_hash'] == 'schedule-a'
+        assert event['config_hash_short'] == 'config-a'
+        assert event['schedule_hash_short'] == 'schedule-a'
         assert event['schedule_entry_id'] == 'entry-a'
         assert event['planned_at']
         assert event['local_date']
         assert event['weekday'] == 'Monday'
         assert event['timezone']
+        assert 'schedule_entry_id_short' not in event
+        assert 'trigger_id_short' not in event
 
 
 def test_holiday_skip_contains_scheduled_context(
@@ -385,6 +389,7 @@ def test_holiday_skip_contains_scheduled_context(
     assert event['trigger_id']
     assert event['schedule_entry_id'] == 'entry-a'
     assert event['config_hash'] == 'config-a'
+    assert event['config_hash_short'] == 'config-a'
 
 
 def test_schedule_entry_event_uses_canonical_day_time_and_wav_key(
@@ -412,6 +417,8 @@ def test_schedule_entry_event_uses_canonical_day_time_and_wav_key(
     assert event['schedule_entry_id']
     assert event['config_hash'] == 'config-a'
     assert event['schedule_hash'] == 'schedule-a'
+    assert event['config_hash_short'] == 'config-a'
+    assert event['schedule_hash_short'] == 'schedule-a'
     bell.close()
 
 

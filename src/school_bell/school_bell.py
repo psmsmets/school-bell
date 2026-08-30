@@ -19,7 +19,7 @@ from typing import List, Union
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
-from .identifiers import schedule_entry_id, trigger_id
+from .identifiers import schedule_entry_id, short_hash, trigger_id
 from .monitoring import (
     StatusServer,
     configure_remote_syslog,
@@ -176,12 +176,17 @@ class SchoolBell(object):
 
     def _revision_fields(self) -> dict:
         """Return configured revision identifiers when available."""
-        return {
+        fields = {
             key: value for key, value in {
                 'config_hash': self.__config_hash,
                 'schedule_hash': self.__schedule_hash,
             }.items() if value is not None
         }
+        if self.__config_hash is not None:
+            fields['config_hash_short'] = short_hash(self.__config_hash)
+        if self.__schedule_hash is not None:
+            fields['schedule_hash_short'] = short_hash(self.__schedule_hash)
+        return fields
 
     def _execution_fields(self, context: dict = None) -> dict:
         """Create stable fields for one scheduled execution."""

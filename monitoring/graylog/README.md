@@ -127,7 +127,9 @@ Configuration and scheduled bell events also expose these separate fields:
 
 ```text
 sb_config_hash
+sb_config_hash_short
 sb_schedule_hash
+sb_schedule_hash_short
 sb_schedule_entry_id
 sb_trigger_id
 sb_planned_at
@@ -138,6 +140,9 @@ sb_timezone
 
 The hashes are calculated from canonical JSON before runtime-only command-line
 values are added. No raw configuration or monitoring credentials are sent.
+The `_short` fields contain the first 12 hexadecimal characters for compact
+dashboard display only. Keep using the complete hashes for exact filters,
+grouping, alerts and automation.
 `schedule_entry_loaded` records form the searchable inventory of configured
 weekday/time/WAV combinations.
 
@@ -185,8 +190,8 @@ field `timestamp`; use descending order for all tables containing that metric.
 | GPIO activity | `sb_event:(gpio_activated OR gpio_deactivated)` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_gpio_state`, `sb_gpio_pins`; metric: `count()`; range: 24 hours |
 | Remote triggers | `sb_event:remote_trigger` | Data table | Rows: `sb_device_id`, `sb_remote_host`, `sb_status`; metrics: `count()`, `max(sb_duration_seconds)`; range: 7 days |
 | Recent events | `sb_application:school-bell` | Message table | Columns: `timestamp`, `sb_device_id`, `sb_event`, `sb_status`, `sb_message`; range: 24 hours |
-| Configuration revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_device_id`, `sb_config_hash`; metric: `max(timestamp)`; range: 30 days |
-| Schedule revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_schedule_hash`, `sb_device_id`; metric: `max(timestamp)`; range: 30 days |
+| Configuration revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_device_id`, `sb_config_hash_short`; metric: `max(timestamp)`; range: 30 days |
+| Schedule revisions | `sb_event:schedule_loaded` | Data table | Rows: `sb_schedule_hash_short`, `sb_device_id`; metric: `max(timestamp)`; range: 30 days |
 | Schedule inventory | `sb_event:schedule_entry_loaded` | Data table | Rows: `sb_device_id`, `sb_weekday`, `sb_local_time`, `sb_wav_key`, `sb_schedule_entry_id`; metric: `max(timestamp)`; range: 30 days |
 | Duplicate executions | `sb_event:bell_ring AND sb_trigger_id:*` | Data table | Row: `sb_trigger_id`; metrics: `count()`, `cardinality(sb_device_id)`; range: 7 days; investigate rows with count greater than 1 |
 | Planned failures | `sb_trigger_id:* AND sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_trigger_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
