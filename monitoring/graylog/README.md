@@ -5,6 +5,22 @@ School Bell Raspberry Pis. The device ID defaults to the hostname. Set
 `monitoring.device_id` only when a separate, stable monitoring identity is
 needed.
 
+## Reusable content pack
+
+[`school-bell-monitoring-content-pack.json`](school-bell-monitoring-content-pack.json)
+installs the **School Bell Monitoring** content pack without parameters. It
+contains the School Bell stream, an exact `application_name=school-bell`
+stream rule, the JSON parsing pipeline and rule, the pipeline-to-stream
+connection, the monitoring dashboard, and event definitions for duplicate
+executions and failed planned bells.
+
+The pack deliberately contains no Syslog input, input-specific routing rule,
+notification, credential, or environment-specific setting. Before installing
+it, configure any Graylog RFC 5424 UDP or TCP Syslog input to receive School
+Bell events. Content-pack UUIDs in the file are portable dependency keys that
+Graylog resolves to newly installed native entity IDs; the file contains no
+fixed native Graylog object IDs.
+
 ## 1. Configure each Raspberry Pi
 
 Add `monitoring` at the top level of `/home/pi/schema.json`, next to
