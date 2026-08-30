@@ -67,18 +67,40 @@ Every remote record includes stable fields suitable for Graylog indexing:
         "message": "bell ring",
         "label_school": "vito",
         "label_zone": "main",
+        "config_hash": "f72a...",
+        "config_hash_short": "f72a93cb815c",
+        "schedule_hash": "a54d...",
+        "schedule_hash_short": "a54d92730b64",
+        "schedule_entry_id": "4c81...",
+        "trigger_id": "83f2...",
+        "planned_at": "2026-09-07T08:30:00+02:00",
+        "local_date": "2026-09-07",
+        "weekday": "Monday",
+        "timezone": "Europe/Brussels",
         "wav_key": "0",
         "gpio_pins": [26, 20]
     }
 
 Stable event names include ``service_started``, ``service_stopped``,
-``schedule_loaded``, ``bell_ring``, ``bell_skipped_holiday``, ``gpio_test``,
+``schedule_loaded``, ``schedule_entry_loaded``, ``bell_ring``,
+``bell_skipped_holiday``, ``gpio_test``,
 ``gpio_activated``, ``gpio_deactivated``, ``remote_trigger``, and
 ``health_status``. GPIO events include the configured pins, polarity and
 resulting logical state. Remote-trigger events include the remote host, WAV
 key, duration and a consistent success or failure status. Future calendar
 monitoring can add ``bell_skipped_calendar``, ``calendar_refresh`` and
 ``calendar_error`` without changing the common fields.
+
+``config_hash`` identifies the complete supplied JSON configuration, while
+``schedule_hash`` identifies only its ``schedule`` section. Both are computed
+from canonical JSON before runtime-only values are added. Scheduled results
+share a ``trigger_id`` across local, remote, skipped and failed events.
+Their corresponding ``config_hash_short`` and ``schedule_hash_short`` fields
+contain the first 12 characters for display only; exact comparisons continue
+to use the complete hashes.
+``schedule_entry_loaded`` exposes the non-sensitive weekday, time, WAV key and
+stable entry identifier needed to inventory expected schedule entries. Raw
+configuration values and credentials are never included in these events.
 
 
 HTTP API

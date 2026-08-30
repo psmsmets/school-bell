@@ -39,7 +39,17 @@ def test_structured_syslog_contains_graylog_fields():
     )
     record.event = 'bell_ring'
     record.status = 'success'
-    record.fields = {'wav_key': '0', 'gpio_pins': [26, 20]}
+    record.fields = {
+        'wav_key': '0',
+        'gpio_pins': [26, 20],
+        'config_hash': 'config-a',
+        'config_hash_short': 'config-a',
+        'schedule_hash': 'schedule-a',
+        'schedule_hash_short': 'schedule-a',
+        'schedule_entry_id': 'entry-a',
+        'trigger_id': 'trigger-a',
+        'planned_at': '2026-09-07T08:30:00+02:00',
+    }
 
     formatted = formatter.format(record)
     payload = json.loads(formatted.split(' ', 7)[7])
@@ -55,6 +65,13 @@ def test_structured_syslog_contains_graylog_fields():
     assert payload['label_school'] == 'vito'
     assert payload['label_zone'] == 'main'
     assert payload['gpio_pins'] == [26, 20]
+    assert payload['config_hash'] == 'config-a'
+    assert payload['config_hash_short'] == 'config-a'
+    assert payload['schedule_hash'] == 'schedule-a'
+    assert payload['schedule_hash_short'] == 'schedule-a'
+    assert payload['schedule_entry_id'] == 'entry-a'
+    assert payload['trigger_id'] == 'trigger-a'
+    assert payload['planned_at'] == '2026-09-07T08:30:00+02:00'
     assert payload['timestamp']
 
 

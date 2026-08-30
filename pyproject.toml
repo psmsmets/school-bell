@@ -41,7 +41,8 @@ dependencies = [
     "adafruit-lgpio>=0.2.2.0; sys_platform == 'linux' and python_version >= '3.13' and platform_machine == 'aarch64'",
     "adafruit-lgpio>=0.2.2.0; sys_platform == 'linux' and python_version >= '3.13' and platform_machine == 'armv7l'",
     "requests>=2.20",
-    "schedule>=1.1.0",
+    "schedule>=1.2.0",
+    "pytz>=2021.1",
 ]
 
 [project.urls]
