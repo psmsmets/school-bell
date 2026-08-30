@@ -70,9 +70,17 @@ Type ``school-bell --help`` for the usage.
 Configuration (JSON)
 ====================
 
+Configuration file
+------------------
+
+Pass the JSON configuration as a string or as the path to a file such as
+``schema.json``. Run ``school-bell --demo-config`` to print a complete example.
+The following configuration shows the main scheduling and audio settings:
+
 .. code-block:: JSON
 
     {
+        "timezone": "Europe/Brussels",
         "schedule": {
             "Mon": {"08:30": 0, "12:00": 0, "15:00": 0},
             "Tue": {"08:30": 0, "12:00": 0, "15:00": 0},
@@ -92,6 +100,25 @@ Configuration (JSON)
         "holidays": "BE-NL",
         "timeout": 10
     }
+
+Schedule and audio
+------------------
+
+The main settings are:
+
+================  ============================================================
+Setting           Purpose
+================  ============================================================
+``schedule``      Maps weekdays and local times to keys from ``wav``.
+``wav``           Maps sample keys to WAVE filenames.
+``root``          Base directory for local WAVE files.
+``device``        Optional ALSA playback device.
+``timezone``      Timezone used to evaluate the schedule.
+``timeout``       Timeout in seconds for remote SSH connections.
+================  ============================================================
+
+GPIO relays
+-----------
 
 The optional ``buzz_gpio`` setting activates a relay while the bell audio is
 playing. It accepts a single GPIO pin for backwards compatibility, or a list
@@ -129,8 +156,8 @@ contacts with the bell disconnected before deployment.
 .. _Waveshare RPi Relay Board: https://www.waveshare.com/wiki/RPi_Relay_Board
 .. _Raspberry Pi GPIO Pinout: https://pinout.xyz/
 
-Testing GPIO outputs
---------------------
+Testing GPIO and audio
+----------------------
 
 Run with ``--test`` to activate each configured ``buzz_gpio`` output
 sequentially for one second. Every output is returned to its inactive state
@@ -140,6 +167,9 @@ before the next pin is tested. The configured WAVE samples are tested as well.
 
     school-bell schema.json --test
 
+Holiday calendar
+----------------
+
 The optional ``holidays`` setting accepts an `OpenHolidays group code`_.
 For example, ``BE-NL`` selects the Dutch-language school-holiday group in
 Belgium. When configured, ringing is disabled during public and school
@@ -147,9 +177,15 @@ holidays returned for that group.
 
 .. _OpenHolidays group code: https://www.openholidaysapi.org/en/api/
 
-The remote trigger requires an ``ssh-key`` to connect to the remote host!
+Remote triggers
+---------------
 
-Generate a new ``ssh-key`` named ``school-bell`` in ``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname ``pibell2``
+The ``trigger`` setting maps remote SSH hosts to their WAVE root directory.
+A remote trigger requires an SSH key to connect to the remote host.
+
+Generate a new SSH key named ``school-bell`` in
+``${HOME}/.ssh/id_school_bell`` and upload it to the Raspberry Pi with hostname
+``pibell2``:
 
 .. code-block:: sh
 
@@ -166,6 +202,15 @@ Add the following configuration for ``pibell2`` to ``~/.ssh/config``:
         ForwardX11 no
         PreferredAuthentications publickey
         IdentityFile ~/.ssh/id_school_bell
+
+Monitoring
+----------
+
+School Bell can forward structured events from multiple Raspberry Pis to a
+central syslog or Graylog server and expose optional ``/status`` and ``/health``
+HTTP endpoints. See the `monitoring guide`_.
+
+.. _monitoring guide: monitoring/README.md
 
 
 Systemd service
@@ -203,16 +248,6 @@ Logs are handled via ``syslog``. Show all logs of today:
 .. code-block:: sh
 
     journalctl -u school-bell --since=today
-
-
-Remote monitoring
-=================
-
-School Bell can forward structured events from multiple Raspberry Pis to a
-central syslog/Graylog server and expose optional ``/status`` and ``/health``
-HTTP endpoints. See the `remote monitoring guide`_.
-
-.. _remote monitoring guide: docs/MONITORING.rst
 
 
 Licensing
