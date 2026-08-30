@@ -39,7 +39,17 @@ Add `monitoring` at the top level of `/home/pi/schema.json`:
 
 `device_id` defaults to the Raspberry Pi hostname. Set
 `monitoring.device_id` explicitly only when the monitoring identity must remain
-stable after renaming or replacing the Pi.
+stable after renaming or replacing the Pi. Use a unique hostname or explicit
+device ID for every bell. Labels are optional and provide stable metadata for
+filtering by school, site or zone.
+
+The top-level `timezone` setting controls schedule evaluation and the timezone
+recorded in planned bell events. Configuration and schedule hashes are derived
+from canonical JSON before runtime-only command-line values are added. Raw
+configuration and monitoring credentials are not emitted. Short hashes contain
+the first 12 hexadecimal characters for display only; use complete hashes for
+exact comparison and automation. `schedule_entry_loaded` events provide the
+weekday/time/WAV inventory of the configured schedule.
 
 Restart the service after changing the configuration:
 

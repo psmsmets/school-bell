@@ -1,9 +1,9 @@
 # Graylog setup for School Bell
 
-This directory configures one central Graylog syslog input for any number of
-School Bell Raspberry Pis. The device ID defaults to the hostname. Set
-`monitoring.device_id` only when a separate, stable monitoring identity is
-needed.
+This directory contains the Graylog-specific input helper, reusable content
+pack, parsing rule, test sender and dashboard reference. See the parent
+[`monitoring/README.md`](../README.md) for School Bell monitoring configuration,
+device identity, the HTTP status service and service management.
 
 ## Reusable content pack
 
@@ -21,78 +21,7 @@ Bell events. Content-pack UUIDs in the file are portable dependency keys that
 Graylog resolves to newly installed native entity IDs; the file contains no
 fixed native Graylog object IDs.
 
-## 1. Configure each Raspberry Pi
-
-Add `monitoring` at the top level of `/home/pi/schema.json`, next to
-`schedule`, `wav`, `buzz_gpio`, and the other School Bell settings:
-
-```json
-{
-  "root": "/home/pi/samples",
-  "timezone": "Europe/Brussels",
-  "buzz_gpio": [26, 20],
-  "buzz_active_high": false,
-  "monitoring": {
-    "labels": {
-      "school": "vito",
-      "zone": "main"
-    },
-    "heartbeat_interval": 300,
-    "syslog": {
-      "host": "192.168.88.90",
-      "port": 1514,
-      "protocol": "udp",
-      "facility": "daemon"
-    },
-    "status": {
-      "enabled": true,
-      "host": "0.0.0.0",
-      "port": 8080,
-      "token": "replace-with-a-secret",
-      "include_systemd": true
-    }
-  }
-}
-```
-
-Use the address of the Graylog server for `host`, and make `port` and
-`protocol` match the active Graylog Syslog input. Make every hostname unique,
-or configure an explicit unique `device_id` if hostnames are not a suitable
-stable identity. Labels are optional, but make dashboard filtering per school,
-site, or zone easier.
-
-`timezone` controls both schedule evaluation and the timezone recorded in
-planned bell events. The default is `Europe/Brussels`; configuring it
-explicitly makes the intended wall-clock schedule unambiguous.
-
-The `status` section enables the optional read-only web service on the Pi.
-Binding it to `0.0.0.0` makes it reachable over the network, so use a bearer
-token and restrict port 8080 to the management network where possible. Check
-both endpoints with:
-
-```sh
-curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/status
-curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/health
-```
-
-`/status` returns the version, uptime, schedule, GPIO pins, last ring, last
-error, and an optional safe subset of systemd state. `/health` returns HTTP 200
-while the scheduler is healthy and HTTP 503 when it is unhealthy. Omit the
-complete `status` section to disable the web service.
-
-Restart School Bell after changing the configuration:
-
-```sh
-sudo systemctl restart school-bell.service
-sudo journalctl -u school-bell.service -n 50 --no-pager
-```
-
-With the default interval, a `health_status` heartbeat should appear in
-Graylog within five minutes.
-
-## 2. Create the input
+## 1. Create the input
 
 Create a Graylog access token with permission to manage inputs, then run:
 
@@ -104,22 +33,17 @@ export GRAYLOG_INPUT_PORT=1514
 ```
 
 The script creates a global UDP Syslog input. Set `GRAYLOG_PROTOCOL=tcp` for a
-TCP input. Ensure the selected port is allowed by the Graylog host firewall.
+TCP input. Ensure the selected port is allowed by the Graylog host firewall and
+make the School Bell Syslog host, port and protocol match this input.
 
-## 3. Extract the JSON fields
+## 2. Verify JSON parsing
 
-Create a pipeline in Graylog, add the rule from
-[`pipeline-rule.conf`](pipeline-rule.conf), and connect the pipeline to the
-dedicated School Bell stream. Graylog 7 retains the RFC5424 message ID and
+The content pack connects its JSON parsing pipeline to the dedicated School
+Bell stream. [`pipeline-rule.conf`](pipeline-rule.conf) contains the same rule
+for reference or manual setup. Graylog 7 can retain the RFC 5424 message ID and
 structured-data marker in `message` (for example `health_status - {...}`). The
-rule recognizes `application_name=school-bell`, strips everything before the
-first JSON opening brace, and turns the remaining JSON stored in
-the syslog `message` field into directly searchable Graylog fields. Extracted
-fields use the `sb_` prefix to avoid conflicts with Graylog's reserved
-`message`, `level`, and `timestamp` fields. The original syslog fields and raw
-JSON message are deliberately retained alongside the extracted fields. This
-makes troubleshooting the input and pipeline possible without losing the
-original record.
+rule strips everything before the first JSON opening brace and exposes the JSON
+properties as searchable `sb_*` fields while retaining the original message.
 
 The common query for all bells is:
 
@@ -154,15 +78,10 @@ sb_weekday
 sb_timezone
 ```
 
-The hashes are calculated from canonical JSON before runtime-only command-line
-values are added. No raw configuration or monitoring credentials are sent.
-The `_short` fields contain the first 12 hexadecimal characters for compact
-dashboard display only. Keep using the complete hashes for exact filters,
-grouping, alerts and automation.
-`schedule_entry_loaded` records form the searchable inventory of configured
-weekday/time/WAV combinations.
+The `_short` fields are intended for compact dashboard display. Use complete
+hashes for exact Graylog filters, grouping, alerts and automation.
 
-## 4. Send test events
+## 3. Send test events
 
 Test two simulated Raspberry Pis:
 
