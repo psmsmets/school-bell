@@ -1,0 +1,119 @@
+---
+- name: Back up School Bell data
+  hosts: all
+  gather_facts: false
+  vars:
+    school_bell_user: pi
+    school_bell_home: "/home/{{ school_bell_user }}"
+    school_bell_config_name: schema.json
+    school_bell_backup_samples: false
+    school_bell_backup_root: "{{ playbook_dir }}/../backups"
+
+  pre_tasks:
+    - name: Create one timestamp for this backup run
+      ansible.builtin.set_fact:
+        school_bell_backup_run_timestamp: >-
+          {{ school_bell_backup_timestamp | default(lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ'), true) }}
+      delegate_to: localhost
+      run_once: true
+
+    - name: Determine backup paths
+      ansible.builtin.set_fact:
+        school_bell_config_path: "{{ school_bell_home }}/{{ school_bell_config_name }}"
+        school_bell_samples_path: "{{ school_bell_home }}/samples"
+        school_bell_backup_timestamp_effective: >-
+          {{ hostvars[ansible_play_hosts_all[0]].school_bell_backup_run_timestamp }}
+        school_bell_host_backup_path: >-
+          {{ school_bell_backup_root }}/{{ hostvars[ansible_play_hosts_all[0]].school_bell_backup_run_timestamp }}/{{ inventory_hostname }}
+
+    - name: Validate backup path components
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname is match('^[A-Za-z0-9_.-]+$')
+          - school_bell_backup_timestamp_effective is match('^[A-Za-z0-9_.-]+$')
+        fail_msg: >-
+          The inventory hostname and backup timestamp may contain only letters,
+          numbers, dots, underscores, and hyphens.
+
+    - name: Check whether the host backup already exists
+      ansible.builtin.stat:
+        path: "{{ school_bell_host_backup_path }}"
+      delegate_to: localhost
+      register: school_bell_existing_local_backup
+
+    - name: Refuse to overwrite an existing backup
+      ansible.builtin.assert:
+        that: not school_bell_existing_local_backup.stat.exists
+        fail_msg: >-
+          Backup {{ school_bell_host_backup_path }} already exists; refusing to
+          overwrite it. Choose another school_bell_backup_timestamp.
+
+    - name: Check remote configuration
+      ansible.builtin.stat:
+        path: "{{ school_bell_config_path }}"
+      register: school_bell_remote_config
+
+    - name: Require a regular configuration file
+      ansible.builtin.assert:
+        that: school_bell_remote_config.stat.isreg | default(false)
+        fail_msg: >-
+          Required configuration {{ school_bell_config_path }} is missing or is
+          not a regular file; no backup was created.
+
+    - name: Check remote samples directory
+      ansible.builtin.stat:
+        path: "{{ school_bell_samples_path }}"
+      register: school_bell_remote_samples
+      when: school_bell_backup_samples | bool
+
+    - name: Require samples directory when samples are requested
+      ansible.builtin.assert:
+        that: school_bell_remote_samples.stat.isdir | default(false)
+        fail_msg: >-
+          Requested samples directory {{ school_bell_samples_path }} is missing
+          or is not a directory; no backup was created.
+      when: school_bell_backup_samples | bool
+
+  tasks:
+    - name: Create local host backup directory
+      ansible.builtin.file:
+        path: "{{ school_bell_host_backup_path }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+
+    - name: Back up configuration
+      ansible.builtin.fetch:
+        src: "{{ school_bell_config_path }}"
+        dest: "{{ school_bell_host_backup_path }}/schema.json"
+        flat: true
+        fail_on_missing: true
+
+    - name: Create local samples backup directory
+      ansible.builtin.file:
+        path: "{{ school_bell_host_backup_path }}/samples"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      when: school_bell_backup_samples | bool
+
+    - name: Find remote sample files
+      ansible.builtin.find:
+        paths: "{{ school_bell_samples_path }}"
+        file_type: file
+        recurse: true
+        hidden: true
+      register: school_bell_sample_files
+      when: school_bell_backup_samples | bool
+
+    - name: Back up sample files
+      ansible.builtin.fetch:
+        src: "{{ item.path }}"
+        dest: >-
+          {{ school_bell_host_backup_path }}/samples/{{ item.path | regex_replace('^' + school_bell_samples_path + '/', '') }}
+        flat: true
+        fail_on_missing: true
+      loop: "{{ school_bell_sample_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: school_bell_backup_samples | bool
