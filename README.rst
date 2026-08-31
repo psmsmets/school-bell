@@ -98,6 +98,7 @@ The following configuration shows the main scheduling and audio settings:
         "root": "${HOME}/samples",
         "device": "Headphones",
         "holidays": "BE-NL",
+        "disable_calendar": "https://example.com/public-calendar.ics",
         "timeout": 10
     }
 
@@ -106,16 +107,18 @@ Schedule and audio
 
 The main settings are:
 
-================  ============================================================
-Setting           Purpose
-================  ============================================================
-``schedule``      Maps weekdays and local times to keys from ``wav``.
-``wav``           Maps sample keys to WAVE filenames.
-``root``          Base directory for local WAVE files.
-``device``        Optional ALSA playback device.
-``timezone``      Timezone used to evaluate the schedule.
-``timeout``       Timeout in seconds for remote SSH connections.
-================  ============================================================
+====================  ========================================================
+Setting               Purpose
+====================  ========================================================
+``schedule``          Maps weekdays and local times to keys from ``wav``.
+``wav``               Maps sample keys to WAVE filenames.
+``root``              Base directory for local WAVE files.
+``device``            Optional ALSA playback device.
+``timezone``          Timezone used to evaluate the schedule.
+``timeout``           Timeout in seconds for network and SSH operations.
+``disable_calendar``  Optional public iCalendar URL with periods during which
+                      bells are disabled.
+====================  ========================================================
 
 GPIO relays
 -----------
@@ -176,6 +179,47 @@ Belgium. When configured, ringing is disabled during public and school
 holidays returned for that group.
 
 .. _OpenHolidays group code: https://www.openholidaysapi.org/en/api/
+
+Public disable calendar
+-----------------------
+
+The optional ``disable_calendar`` setting accepts a public iCalendar
+(``.ics``) URL published by services such as Google Calendar or Outlook:
+
+.. code-block:: JSON
+
+    {
+        "timezone": "Europe/Brussels",
+        "disable_calendar": "https://example.com/public-calendar.ics"
+    }
+
+Every non-cancelled calendar event disables scheduled bells during its
+effective period. An all-day event disables the complete local day. Timed
+events disable only bells whose scheduled time falls within the event, and
+events may span several hours or days. Recurring events, excluded dates and
+modified or cancelled occurrences are respected. Event end times are
+exclusive, as defined by iCalendar.
+
+The calendar is downloaded when School Bell starts and refreshed every day.
+After a failed refresh, the last successfully parsed in-memory calendar is
+kept. If no successful download is available, School Bell logs a warning and
+continues ringing normally. The published URL is never included in logs
+because it may contain a private access token.
+
+To obtain a URL, publish or share the calendar from the calendar provider and
+copy its public iCalendar/ICS link. In Google Calendar this is the public or
+secret iCal address under *Integrate calendar*. In Outlook, publish the
+calendar and copy the generated ICS link. Anyone who obtains such a URL may
+be able to read the published calendar, so restrict event details and sharing
+permissions appropriately. See the provider instructions for `Google
+Calendar sharing`_ and `Outlook calendar publishing`_.
+
+The ``disable_calendar`` check complements ``holidays``: either a returned
+holiday or a matching calendar event is sufficient to skip the bell. Omit
+``disable_calendar`` or set it to an empty string to disable this feature.
+
+.. _Google Calendar sharing: https://support.google.com/calendar/answer/37083
+.. _Outlook calendar publishing: https://support.microsoft.com/office/share-your-calendar-in-outlook-on-the-web-7ecef8ae-139c-40d9-bae2-a23977ee58d5
 
 Remote triggers
 ---------------

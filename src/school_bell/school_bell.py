@@ -7,7 +7,7 @@ import datetime
 import os
 import re
 import requests
-import schedule
+import schedule as schedule_module
 import pytz
 import socket
 import sys
@@ -19,6 +19,7 @@ from typing import List, Union
 
 # Relative imports
 from .openholidays import OpenHolidays, is_holiday
+from .disable_calendar import DisableCalendar
 from .identifiers import schedule_entry_id, short_hash, trigger_id
 from .monitoring import (
     StatusServer,
@@ -34,6 +35,9 @@ except (ValueError, ModuleNotFoundError, SyntaxError):
 
 
 __all__ = ['SchoolBell']
+
+# Retain the module attribute used by existing callers and tests.
+schedule = schedule_module
 
 
 # Check platform and set wav player
@@ -72,6 +76,7 @@ class SchoolBell(object):
         config_hash: str = None,
         schedule_hash: str = None,
         timezone: str = 'Europe/Brussels',
+        disable_calendar: str = None,
     ):
         """Initialize the SchoolBell object
         """
@@ -143,6 +148,7 @@ class SchoolBell(object):
         self.buzzer = buzz_gpio
         self.timeout = timeout or 10
         self.openholidays = holidays or None
+        self._configure_disable_calendar(disable_calendar)
         self.trigger = trigger or dict()
         self.wav = wav or dict()
 
@@ -354,6 +360,23 @@ class SchoolBell(object):
             self.log.removeHandler(self.__remote_syslog_handler)
             self.__remote_syslog_handler.close()
             self.__remote_syslog_handler = None
+
+    def _configure_disable_calendar(self, url: str = None):
+        """Configure startup and daily refresh of a public calendar."""
+        self.__disable_calendar = None
+        if not url:
+            return
+        self.log.info('Public calendar configured.')
+        self.__disable_calendar = DisableCalendar(
+            url,
+            timezone=self.__timezone_name,
+            timeout=self.timeout,
+            logger=self.log,
+        )
+        self.__disable_calendar.refresh()
+        schedule_module.every().day.at(
+            '00:05', self.__timezone_name
+        ).do(self.__disable_calendar.refresh)
 
     @property
     def device(self):
@@ -870,25 +893,7 @@ class SchoolBell(object):
             kwargs.pop('_schedule_context', None)
         )
 
-        if self.is_holiday():
-            self.log.info("today is a holiday, no need to ring!")
-            with self.__state_lock:
-                self.__last_ring = {
-                    'time': datetime.datetime.now(
-                        datetime.timezone.utc
-                    ).isoformat(),
-                    'key': str(key),
-                    'status': 'skipped',
-                    'skip_reason': 'holiday',
-                }
-            log_event(
-                self.log,
-                'bell_skipped_holiday',
-                status='skipped',
-                wav_key=str(key),
-                skip_reason='holiday',
-                **event_fields,
-            )
+        if self._skip_disabled_bell(str(key), event_fields):
             return False
 
         wav = self.get_wav(key)
@@ -982,6 +987,69 @@ class SchoolBell(object):
 
         self.log.debug(".. done")
         return True
+
+    def _skip_disabled_bell(self, key: str, event_fields: dict) -> bool:
+        """Record a holiday or public-calendar skip when applicable."""
+        if self.is_holiday():
+            self.log.info("today is a holiday, no need to ring!")
+            self._record_bell_skip(key, 'holiday')
+            log_event(
+                self.log,
+                'bell_skipped_holiday',
+                status='skipped',
+                wav_key=key,
+                skip_reason='holiday',
+                **event_fields,
+            )
+            return True
+
+        calendar_event = None
+        if self.__disable_calendar is not None:
+            calendar_event = self.__disable_calendar.blocking_event()
+        if calendar_event is None:
+            return False
+
+        summary = calendar_event['summary']
+        local_now = datetime.datetime.now(self.__timezone)
+        if calendar_event['all_day']:
+            self.log.info(
+                'Bell disabled for %s by public calendar event: %s',
+                local_now.date().isoformat(), summary
+            )
+        else:
+            self.log.info(
+                'Bell disabled at %s by public calendar event: %s',
+                local_now.isoformat(), summary
+            )
+        self._record_bell_skip(
+            key,
+            'public_calendar',
+            calendar_event_summary=summary,
+        )
+        log_event(
+            self.log,
+            'bell_skipped_calendar',
+            status='skipped',
+            wav_key=key,
+            skip_reason='public_calendar',
+            calendar_event_summary=summary,
+            calendar_event_all_day=calendar_event['all_day'],
+            **event_fields,
+        )
+        return True
+
+    def _record_bell_skip(self, key: str, reason: str, **fields):
+        """Store the common monitoring state for a skipped bell."""
+        with self.__state_lock:
+            self.__last_ring = {
+                'time': datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+                'key': key,
+                'status': 'skipped',
+                'skip_reason': reason,
+                **fields,
+            }
 
     def create_schedule(self, value: dict = None, **kwargs):
         """Create a schedule
