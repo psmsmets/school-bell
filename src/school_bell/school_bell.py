@@ -13,7 +13,7 @@ import socket
 import sys
 from gpiozero import Buzzer
 from logging import Logger
-from threading import RLock, Thread
+from threading import Event, Lock, RLock, Thread
 from time import monotonic, sleep
 from typing import List, Union
 
@@ -27,6 +27,8 @@ from .monitoring import (
     get_systemd_status,
     log_event,
 )
+from .manual_bell import ManualBellInput
+from .playback import AudioPlayback, playback_command
 from .utils import init_logger, is_raspberry_pi, system_call
 try:
     from .version import version
@@ -77,6 +79,7 @@ class SchoolBell(object):
         schedule_hash: str = None,
         timezone: str = 'Europe/Brussels',
         disable_calendar: str = None,
+        manual_bell: dict = None,
     ):
         """Initialize the SchoolBell object
         """
@@ -90,6 +93,10 @@ class SchoolBell(object):
         self.__started_at = datetime.datetime.now(datetime.timezone.utc)
         self.__hostname = socket.gethostname()
         self.__state_lock = RLock()
+        self.__bell_lock = Lock()
+        self.__active_bell = None
+        self.__active_playback = None
+        self.__manual_bell = None
         self.__scheduler_running = False
         self.__last_ring = None
         self.__last_error = None
@@ -151,6 +158,8 @@ class SchoolBell(object):
         self._configure_disable_calendar(disable_calendar)
         self.trigger = trigger or dict()
         self.wav = wav or dict()
+
+        self._configure_manual_bell(manual_bell)
 
         # Create schedule
         self.create_schedule(schedule)
@@ -313,6 +322,7 @@ class SchoolBell(object):
                 'gpio_active_high': self.__buzz_active_high,
                 'last_ring': copy.deepcopy(self.__last_ring),
                 'last_error': copy.deepcopy(self.__last_error),
+                'active_bell': copy.deepcopy(self.__active_bell),
             }
 
         status_config = self.__monitoring.get('status', {})
@@ -350,6 +360,12 @@ class SchoolBell(object):
 
     def close(self):
         """Stop monitoring resources cleanly."""
+        if self.__manual_bell is not None:
+            self.__manual_bell.close()
+            self.__manual_bell = None
+        playback = self.__active_playback
+        if playback is not None:
+            playback.stop()
         for buzzer in getattr(self, '_SchoolBell__buzzer', []):
             buzzer.off()
         log_event(self.log, 'service_stopped')
@@ -360,6 +376,31 @@ class SchoolBell(object):
             self.log.removeHandler(self.__remote_syslog_handler)
             self.__remote_syslog_handler.close()
             self.__remote_syslog_handler = None
+
+    def _configure_manual_bell(self, config: dict = None):
+        """Configure the optional single physical trigger button."""
+        if config is None:
+            return
+        validated = ManualBellInput.validate(config, self.__buzzer_pins)
+        if validated['wav_key'] not in self.wav:
+            raise KeyError(
+                'manual_bell.wav_key is not related to any sample!'
+            )
+        if not is_raspberry_pi():
+            self.log.warning(
+                'Host is not a Raspberry Pi: manual bell button disabled!'
+            )
+            return
+        self.__manual_bell = ManualBellInput(
+            validated,
+            trigger=self.trigger_bell,
+            logger=self.log,
+            output_pins=self.__buzzer_pins,
+        )
+        self.log.info(
+            'manual bell = GPIO %s (%s)',
+            validated['gpio'], validated['mode']
+        )
 
     def _configure_disable_calendar(self, url: str = None):
         """Configure startup and daily refresh of a public calendar."""
@@ -787,6 +828,14 @@ class SchoolBell(object):
         """Play a WAVE audio file given the key.
         Returns `True` on success.
         """
+        if not test and device is None:
+            return self.trigger_bell(
+                key,
+                source='manual',
+                respect_calendar=False,
+                include_remote=False,
+            )
+
         wav = self.get_wav(key)
         self.log.info(f"play wav = {key}: {os.path.basename(wav)}")
 
@@ -816,23 +865,48 @@ class SchoolBell(object):
         """Play a remote WAVE audio file given the host and key.
         Returns `True` on success.
         """
-        wav = self.get_remote_wav(host, key)
-        self.log.info(f"play remote wav {key}: {os.path.basename(wav)}")
-
-        success = self._play_remote_monitored(
-            host=host,
-            key=key,
-            wav=wav,
-            test=test,
-            timeout=timeout or self.timeout,
-        )
-
-        if not success:
-            err = f"Could not play remote WAVE audio file \"{wav}\"!"
-            self.log.error(err)
-            raise RuntimeError(err)
-        self.log.info("Play remote completed successfully.")
-        return True
+        fields = {
+            'trigger_source': 'remote',
+            'remote_host': str(host),
+            'wav_key': str(key),
+        }
+        if not self.__bell_lock.acquire(blocking=False):
+            with self.__state_lock:
+                active = copy.deepcopy(self.__active_bell)
+            log_event(
+                self.log, 'bell_trigger_ignored', status='skipped',
+                reason='bell_active',
+                active_trigger_source=(active or {}).get('source'),
+                **fields,
+            )
+            return False
+        with self.__state_lock:
+            self.__active_bell = {
+                'source': 'remote', 'wav_key': str(key),
+                'remote_host': str(host),
+                'started_at': datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+            }
+        try:
+            wav = self.get_remote_wav(host, key)
+            self.log.info(
+                'play remote wav %s: %s', key, os.path.basename(wav)
+            )
+            success = self._play_remote_monitored(
+                host=host, key=key, wav=wav, test=test,
+                timeout=timeout or self.timeout,
+            )
+            if not success:
+                raise RuntimeError(
+                    f'Could not play remote WAVE audio file "{wav}"!'
+                )
+            self.log.info('Play remote completed successfully.')
+            return True
+        finally:
+            with self.__state_lock:
+                self.__active_bell = None
+            self.__bell_lock.release()
 
     def _play_remote_monitored(
         self,
@@ -885,53 +959,122 @@ class SchoolBell(object):
         return success
 
     def ring(self, key: str, **kwargs) -> bool:
-        """Ring the school bell.
-        Returns `True` on success.
-        """
-
+        """Ring from the schedule while preserving the public API."""
         event_fields = self._execution_fields(
             kwargs.pop('_schedule_context', None)
         )
+        return self.trigger_bell(
+            key, source='scheduled', event_fields=event_fields, **kwargs
+        )
 
-        if self._skip_disabled_bell(str(key), event_fields):
+    def trigger_bell(
+        self, key: str, source: str, mode: str = 'once',
+        cancel_event: Event = None, respect_calendar: bool = True,
+        include_remote: bool = True, event_fields: dict = None,
+        source_gpio: int = None,
+    ) -> bool:
+        """Run one exclusive bell signal from any current or future source."""
+        key = str(key)
+        event_fields = dict(event_fields or {})
+        source_fields = {
+            'trigger_source': source, 'wav_key': key, 'mode': mode,
+            **event_fields,
+        }
+        if source_gpio is not None:
+            source_fields['source_gpio'] = source_gpio
+        if source == 'manual_gpio':
+            log_event(self.log, 'manual_bell_triggered', **source_fields)
+        if mode not in ('once', 'hold'):
+            raise ValueError('Bell mode should be once or hold!')
+        if not self.__bell_lock.acquire(blocking=False):
+            with self.__state_lock:
+                active = copy.deepcopy(self.__active_bell)
+            log_event(
+                self.log, 'bell_trigger_ignored', status='skipped',
+                reason='bell_active',
+                active_trigger_source=(active or {}).get('source'),
+                **source_fields,
+            )
             return False
 
-        wav = self.get_wav(key)
-
-        self.log.info(f"ring {key}: {os.path.basename(wav)}")
-
-        operations = []
-        for host, root in self.trigger.items():
-            remote_wav = self.get_wav(key, root)
-            operations.append(
-                (self._play_remote_monitored,
-                 (host, str(key), remote_wav, False, self.timeout,
-                  event_fields))
+        started = monotonic()
+        with self.__state_lock:
+            self.__active_bell = {
+                'source': source, 'wav_key': key, 'mode': mode,
+                'started_at': datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+            }
+        try:
+            if respect_calendar and self._skip_disabled_bell(
+                key, event_fields
+            ):
+                return False
+            cancelled = self._execute_bell(
+                key, mode, cancel_event, include_remote, event_fields
             )
-        operations.append(
-            (_play, (wav, False, self.device, self.log))
-        )
+            if source == 'manual_gpio':
+                log_event(
+                    self.log,
+                    ('manual_bell_cancelled' if cancelled
+                     else 'manual_bell_completed'),
+                    status='cancelled' if cancelled else 'success',
+                    duration_seconds=round(monotonic() - started, 3),
+                    reason='button_released' if cancelled else None,
+                    **source_fields,
+                )
+            return True
+        except Exception as err:
+            if source == 'manual_gpio':
+                log_event(
+                    self.log, 'manual_bell_failed', status='failure',
+                    level=40,
+                    duration_seconds=round(monotonic() - started, 3),
+                    error_category='manual_bell_error', error=str(err),
+                    **source_fields,
+                )
+            raise
+        finally:
+            with self.__state_lock:
+                self.__active_bell = None
+            self.__bell_lock.release()
+
+    def _execute_bell(
+        self, key: str, mode: str, cancel_event: Event,
+        include_remote: bool, event_fields: dict,
+    ) -> bool:
+        """Execute an accepted bell request and return its cancel state."""
+        wav = self.get_wav(key)
+        self.log.info('ring %s: %s', key, os.path.basename(wav))
+        operations = []
+        if include_remote:
+            for host, root in self.trigger.items():
+                operations.append((
+                    self._play_remote_monitored,
+                    (host, key, self.get_wav(key, root), False,
+                     self.timeout, event_fields),
+                ))
         results = [False] * len(operations)
         threads = [
-            Thread(
-                target=_capture_result,
-                args=(results, index, function, arguments)
-            )
+            Thread(target=_capture_result,
+                   args=(results, index, function, arguments))
             for index, (function, arguments) in enumerate(operations)
         ]
-
+        cancelled = False
         try:
             if self.buzzer:
-                self.log.debug(".. buzzer on")
                 self._set_gpio_state(True)
-
-            for t in threads:
-                t.start()
-
-            for t in threads:
-                t.join()
-
-            if not all(results):
+            for thread in threads:
+                thread.start()
+            if mode == 'hold':
+                playback = _start_playback(wav, self.device, self.log)
+                self.__active_playback = playback
+                local_success, cancelled = playback.wait(cancel_event)
+            else:
+                local_success = _play(wav, False, self.device, self.log)
+            for thread in threads:
+                thread.join()
+            if not local_success or not all(results):
                 raise RuntimeError('One or more audio outputs failed!')
         except Exception as err:
             with self.__state_lock:
@@ -939,54 +1082,40 @@ class SchoolBell(object):
                     'time': datetime.datetime.now(
                         datetime.timezone.utc
                     ).isoformat(),
-                    'category': 'bell_error',
-                    'message': str(err),
+                    'category': 'bell_error', 'message': str(err),
                 }
             log_event(
-                self.log,
-                'audio_error',
-                status='failure',
-                level=40,
-                wav_key=str(key),
-                error_category='audio_playback_error',
+                self.log, 'audio_error', status='failure', level=40,
+                wav_key=key, error_category='audio_playback_error',
                 **event_fields,
             )
             log_event(
-                self.log,
-                'bell_ring',
-                status='failure',
-                level=40,
-                wav_key=str(key),
-                gpio_pins=list(self.__buzzer_pins),
+                self.log, 'bell_ring', status='failure', level=40,
+                wav_key=key, gpio_pins=list(self.__buzzer_pins),
                 gpio_active_high=self.__buzz_active_high,
-                error_category='bell_error',
-                **event_fields,
+                error_category='bell_error', **event_fields,
             )
             raise
         finally:
+            self.__active_playback = None
             if self.buzzer:
-                self.log.debug(".. buzzer off")
                 self._set_gpio_state(False)
-
-        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         with self.__state_lock:
             self.__last_ring = {
-                'time': now,
-                'key': str(key),
-                'status': 'success',
+                'time': datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+                'key': key,
+                'status': 'cancelled' if cancelled else 'success',
             }
             self.__last_error = None
         log_event(
-            self.log,
-            'bell_ring',
-            wav_key=str(key),
+            self.log, 'bell_ring',
+            status='cancelled' if cancelled else 'success', wav_key=key,
             gpio_pins=list(self.__buzzer_pins),
-            gpio_active_high=self.__buzz_active_high,
-            **event_fields,
+            gpio_active_high=self.__buzz_active_high, **event_fields,
         )
-
-        self.log.debug(".. done")
-        return True
+        return cancelled
 
     def _skip_disabled_bell(self, key: str, event_fields: dict) -> bool:
         """Record a holiday or public-calendar skip when applicable."""
@@ -1173,6 +1302,18 @@ def _play(wav: str, test: bool = False, device: str = None,
         cmd = cmd + [wav]
 
     return system_call(cmd, logger)
+
+
+def _start_playback(wav: str, device: str = None, logger: Logger = None):
+    """Start controllable local playback used by hold-mode triggers."""
+    command = playback_command(
+        wav=wav,
+        player=__play,
+        test_player=__play_test,
+        alsa=__alsa,
+        device=device,
+    )
+    return AudioPlayback(command, logger).start()
 
 
 def _validate_day(day: str, raise_on_error: bool = False):
