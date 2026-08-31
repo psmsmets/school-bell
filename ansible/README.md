@@ -95,6 +95,94 @@ device-specific schedule to unintended inventory hosts. The configuration
 playbook defaults to `/home/pi/schema.json`; `school_bell_user` and
 `school_bell_config_name` remain configurable.
 
+### Quick rollback without a controller-side backup
+
+`configure.yml` already asks Ansible to keep the previous configuration on the
+Raspberry Pi whenever it replaces `schema.json`. Ansible gives each saved copy
+a unique timestamped name next to the active file, instead of continually
+overwriting a single `schema.json.back`. This provides a flexible short-term
+rollback option even when no backup has first been downloaded to the
+controller.
+
+These on-device copies are deliberately not created by `backup.yml`: that
+playbook must leave the bell unchanged. They should also not be treated as a
+full backup. A damaged or lost SD card, accidental deletion, or filesystem
+corruption can remove both the active configuration and all copies stored next
+to it. Use `backup.yml` when disaster recovery is required.
+
+For an urgent rollback, an administrator can select a timestamped copy on the
+bell, validate that it contains a JSON object, and then deploy that file as the
+new `schema.json`. Keep this as an explicit administrative action: validate the
+selected copy before replacing anything, preserve the current configuration,
+and restart School Bell only if the restored contents differ. If remote
+rollback becomes a regular operation, prefer a separate guarded `rollback.yml`
+playbook with those checks over maintaining one ambiguous `schema.json.back`.
+
+## Back up configurations and samples
+
+`backup.yml` always downloads `schema.json`. It groups controller-side backups
+under `backups/<timestamp>/<inventory-hostname>/` and never writes to the bell.
+The timestamp is generated once in UTC for the entire playbook run:
+
+```sh
+ansible-playbook -i inventory ansible/backup.yml --limit school_bells
+```
+
+Include `/home/pi/samples/` explicitly when needed:
+
+```sh
+ansible-playbook -i inventory ansible/backup.yml \
+  --limit school_bells \
+  -e school_bell_backup_samples=true
+```
+
+For a predictable timestamp (for example in automation), set it explicitly:
+
+```sh
+ansible-playbook -i inventory ansible/backup.yml \
+  --limit pibell-vito-01 \
+  -e school_bell_backup_timestamp=20260831T120000Z
+```
+
+The playbook refuses to run for a host if that host's destination directory
+already exists. It also rejects missing configurations and, when requested,
+missing sample directories before creating local backup directories. `backup.yml`
+uses only read operations on managed hosts; backup directories are created only
+on the Ansible controller.
+
+## Restore a backup
+
+Restore requires all three safety inputs: an existing backup timestamp, a
+targeted `--limit` other than `all`, and explicit confirmation. The playbook
+validates every selected host's local `schema.json` as a non-empty JSON object
+before it starts changing any selected bell:
+
+```sh
+ansible-playbook -i inventory ansible/restore.yml \
+  --limit pibell-vito-01 \
+  -e school_bell_backup_timestamp=20260831T120000Z \
+  -e school_bell_restore_confirm=true
+```
+
+Configuration is restored by default. Samples are restored only with
+`school_bell_restore_samples=true`. To restore samples independently without
+changing the configuration, also set `school_bell_restore_config=false`:
+
+```sh
+ansible-playbook -i inventory ansible/restore.yml \
+  --limit pibell-vito-01 \
+  -e school_bell_backup_timestamp=20260831T120000Z \
+  -e school_bell_restore_confirm=true \
+  -e school_bell_restore_samples=true \
+  -e school_bell_restore_config=false
+```
+
+When samples are requested, the backup must contain a `samples/` directory or
+the restore is rejected before any remote change. Restoring samples copies the
+backed-up files into the bell's samples directory; it does not remove unrelated
+files already on the bell. School Bell is restarted only if restored file
+contents, ownership, or modes actually changed.
+
 ## Update application code safely
 
 Updating a branch, tag, or commit installs only the Python package in the

@@ -133,3 +133,6 @@ dmypy.json
 *.swp
 *.DS_Store
 *.log
+
+# Local Ansible backups
+backups/

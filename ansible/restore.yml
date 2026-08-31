@@ -1,0 +1,134 @@
+---
+- name: Restore School Bell data
+  hosts: all
+  gather_facts: false
+  vars:
+    school_bell_user: pi
+    school_bell_home: "/home/{{ school_bell_user }}"
+    school_bell_config_name: schema.json
+    school_bell_restore_config: true
+    school_bell_restore_samples: false
+    school_bell_restore_confirm: false
+    school_bell_backup_root: "{{ playbook_dir }}/../backups"
+
+  pre_tasks:
+    - name: Require a timestamp, targeted inventory limit, and confirmation
+      ansible.builtin.assert:
+        that:
+          - school_bell_backup_timestamp is defined
+          - school_bell_backup_timestamp | default('') | length > 0
+          - school_bell_backup_timestamp | default('') is match('^[A-Za-z0-9_.-]+$')
+          - ansible_limit is defined
+          - ansible_limit | default('all') != 'all'
+          - school_bell_restore_confirm | bool
+          - school_bell_restore_config | bool or school_bell_restore_samples | bool
+        fail_msg: >-
+          Restore requires school_bell_backup_timestamp, an explicit targeted
+          --limit (not "all"), school_bell_restore_confirm=true, and at least
+          one of school_bell_restore_config or school_bell_restore_samples.
+
+    - name: Validate inventory hostname used in the backup path
+      ansible.builtin.assert:
+        that: inventory_hostname is match('^[A-Za-z0-9_.-]+$')
+        fail_msg: >-
+          Inventory hostname {{ inventory_hostname }} is unsafe for a local
+          backup path.
+
+    - name: Determine restore paths
+      ansible.builtin.set_fact:
+        school_bell_config_path: "{{ school_bell_home }}/{{ school_bell_config_name }}"
+        school_bell_samples_path: "{{ school_bell_home }}/samples"
+        school_bell_host_backup_path: >-
+          {{ school_bell_backup_root }}/{{ school_bell_backup_timestamp }}/{{ inventory_hostname }}
+
+    - name: Check local configuration backup
+      ansible.builtin.stat:
+        path: "{{ school_bell_host_backup_path }}/schema.json"
+        checksum_algorithm: sha256
+      delegate_to: localhost
+      register: school_bell_local_config
+
+    - name: Require a regular non-empty configuration backup
+      ansible.builtin.assert:
+        that:
+          - school_bell_local_config.stat.isreg | default(false)
+          - school_bell_local_config.stat.size | default(0) > 0
+        fail_msg: >-
+          Backup {{ school_bell_host_backup_path }} is incomplete: schema.json
+          is missing, empty, or not a regular file.
+
+    - name: Validate backed-up configuration JSON
+      ansible.builtin.assert:
+        that:
+          - >-
+            (lookup('ansible.builtin.file', school_bell_host_backup_path + '/schema.json') |
+             from_json) is mapping
+        fail_msg: >-
+          Backup {{ school_bell_host_backup_path }}/schema.json must contain a
+          valid JSON object; nothing was restored.
+
+    - name: Check local samples backup
+      ansible.builtin.stat:
+        path: "{{ school_bell_host_backup_path }}/samples"
+      delegate_to: localhost
+      register: school_bell_local_samples
+      when: school_bell_restore_samples | bool
+
+    - name: Require samples backup when samples are requested
+      ansible.builtin.assert:
+        that: school_bell_local_samples.stat.isdir | default(false)
+        fail_msg: >-
+          Backup {{ school_bell_host_backup_path }} has no samples directory;
+          nothing was restored.
+      when: school_bell_restore_samples | bool
+
+  tasks:
+    - name: Determine School Bell primary group
+      ansible.builtin.command:
+        argv:
+          - id
+          - -gn
+          - "{{ school_bell_user }}"
+      register: school_bell_primary_group
+      changed_when: false
+      check_mode: false
+
+    - name: Restore School Bell configuration
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_host_backup_path }}/schema.json"
+        dest: "{{ school_bell_config_path }}"
+        owner: "{{ school_bell_user }}"
+        group: "{{ school_bell_primary_group.stdout }}"
+        mode: "0644"
+      notify: Restart School Bell
+      when: school_bell_restore_config | bool
+
+    - name: Ensure samples directory exists
+      become: true
+      ansible.builtin.file:
+        path: "{{ school_bell_samples_path }}"
+        state: directory
+        owner: "{{ school_bell_user }}"
+        group: "{{ school_bell_primary_group.stdout }}"
+        mode: "0755"
+      when: school_bell_restore_samples | bool
+
+    - name: Restore School Bell samples
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_host_backup_path }}/samples/"
+        dest: "{{ school_bell_samples_path }}/"
+        owner: "{{ school_bell_user }}"
+        group: "{{ school_bell_primary_group.stdout }}"
+        mode: preserve
+        directory_mode: "0755"
+      when: school_bell_restore_samples | bool
+      notify: Restart School Bell
+
+  handlers:
+    - name: Restart School Bell
+      become: true
+      ansible.builtin.systemd_service:
+        name: school-bell
+        state: restarted
