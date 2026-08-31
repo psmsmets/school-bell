@@ -16,5 +16,6 @@
     },
     "root": "${HOME}/samples",
     "holidays": "BE-NL",
+    "disable_calendar": "https://example.com/public-calendar.ics",
     "timeout": 10
 }

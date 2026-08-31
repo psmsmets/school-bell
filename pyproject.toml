@@ -43,6 +43,8 @@ dependencies = [
     "requests>=2.20",
     "schedule>=1.2.0",
     "pytz>=2021.1",
+    "icalendar>=6,<8",
+    "recurring-ical-events>=3,<4",
 ]
 
 [project.urls]

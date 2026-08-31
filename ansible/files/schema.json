@@ -18,5 +18,6 @@
     "buzz_gpio": [26, 20],
     "buzz_active_high": false,
     "holidays": "BE-NL",
+    "disable_calendar": "https://example.com/public-calendar.ics",
     "timeout": 10
 }

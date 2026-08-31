@@ -392,6 +392,83 @@ def test_holiday_skip_contains_scheduled_context(
     assert event['config_hash_short'] == 'config-a'
 
 
+def test_calendar_skip_contains_reason_and_scheduled_context(
+    structured_events, monkeypatch
+):
+    class FakeDisableCalendar:
+        instances = []
+
+        def __init__(self, *_args, **_kwargs):
+            self.refresh_calls = 0
+            self.instances.append(self)
+
+        def refresh(self):
+            self.refresh_calls += 1
+            return True
+
+        def blocking_event(self):
+            return {'summary': 'Staff meeting', 'all_day': False}
+
+    school_bell_module.schedule.clear()
+    monkeypatch.setattr(
+        school_bell_module, 'DisableCalendar', FakeDisableCalendar
+    )
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        disable_calendar='https://calendar.example/token.ics',
+        config_hash='config-a',
+        schedule_hash='schedule-a',
+        monitoring={'device_id': 'bell-01'},
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+
+    assert FakeDisableCalendar.instances[0].refresh_calls == 1
+    assert any(
+        job.job_func.func == FakeDisableCalendar.instances[0].refresh
+        for job in school_bell_module.schedule.jobs
+    )
+
+    try:
+        assert bell.ring('0', _schedule_context={
+            'schedule_entry_id': 'entry-a',
+            'weekday': 'Monday',
+            'local_time': '08:30:00',
+        }) is False
+    finally:
+        school_bell_module.schedule.clear()
+
+    event = next(
+        event for event in structured_events
+        if event['event'] == 'bell_skipped_calendar'
+    )
+    assert event['skip_reason'] == 'public_calendar'
+    assert event['calendar_event_summary'] == 'Staff meeting'
+    assert event['calendar_event_all_day'] is False
+    assert event['schedule_entry_id'] == 'entry-a'
+    assert bell.monitoring_status()['last_ring']['status'] == 'skipped'
+
+
+def test_holiday_check_takes_precedence_over_calendar(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples"
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: True)
+
+    assert bell.ring('0') is False
+    assert any(
+        event['event'] == 'bell_skipped_holiday'
+        for event in structured_events
+    )
+    assert not any(
+        event['event'] == 'bell_skipped_calendar'
+        for event in structured_events
+    )
+
+
 def test_schedule_entry_event_uses_canonical_day_time_and_wav_key(
     structured_events
 ):
