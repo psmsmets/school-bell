@@ -170,6 +170,35 @@ before the next pin is tested. The configured WAVE samples are tested as well.
 
     school-bell schema.json --test
 
+Manual bell button
+------------------
+
+One optional physical push button can trigger a configured WAVE sample:
+
+.. code-block:: JSON
+
+    {
+        "manual_bell": {
+            "gpio": 17,
+            "wav_key": "0",
+            "mode": "once",
+            "pull": "up",
+            "bounce_time": 0.05
+        }
+    }
+
+``mode`` is either ``once`` (finish the complete sample after a press) or
+``hold`` (stop when the button is released, with the sample duration as the
+maximum). ``pull`` accepts ``up``, ``down`` or ``floating`` and
+``bounce_time`` is the debounce interval in seconds. The input GPIO must not
+also be configured as a ``buzz_gpio`` relay output.
+
+Manual signals are deliberate local overrides and are therefore not blocked
+by the holiday or disable calendars. Only one bell signal can be active at a
+time; concurrent scheduled or manual requests are ignored and logged. The
+same internal trigger coordinator can be used by future control interfaces
+without bypassing this exclusivity rule.
+
 Holiday calendar
 ----------------
 

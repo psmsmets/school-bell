@@ -15,6 +15,13 @@
         "1": "ClassBell-SoundBible.com-1426436341.wav"
     },
     "root": "${HOME}/samples",
+    "manual_bell": {
+        "gpio": 17,
+        "wav_key": "0",
+        "mode": "once",
+        "pull": "up",
+        "bounce_time": 0.05
+    },
     "holidays": "BE-NL",
     "disable_calendar": "https://example.com/public-calendar.ics",
     "timeout": 10
