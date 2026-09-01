@@ -1202,60 +1202,83 @@ class SchoolBell(object):
         if not (isinstance(value, dict) and len(value) != 0):
             return
 
-        self.log.info("schedule =")
-        for day, times in value.items():
-            day = day.capitalize()
+        # Validate the complete configuration before registering any jobs. This
+        # keeps schedule loading atomic when a later entry is invalid.
+        validated_entries = []
+        for configured_day, times in value.items():
+            if not isinstance(configured_day, str):
+                raise ValueError(
+                    f'Invalid weekday at schedule[{configured_day!r}]: '
+                    f'{configured_day!r}'
+                )
 
-            if not _validate_day(day, **kwargs):
-                continue
+            day = configured_day.capitalize()
+            if not _validate_day(day):
+                raise ValueError(
+                    f'Invalid weekday at schedule[{configured_day!r}]: '
+                    f'{configured_day!r}. Expected one of Mon, Tue, Wed, Thu, '
+                    'Fri, Sat, Sun.'
+                )
 
             day_num = list(calendar.day_abbr).index(day)
+            for configured_time, key in times.items():
+                if (
+                    not isinstance(configured_time, str)
+                    or not _validate_time(configured_time)
+                ):
+                    raise ValueError(
+                        f'Invalid time at '
+                        f'schedule[{configured_day!r}]'
+                        f'[{configured_time!r}]: {configured_time!r}. '
+                        'Expected HH:MM[:SS].'
+                    )
+                validated_entries.append(
+                    (day, day_num, configured_time, key)
+                )
+
+        self.log.info("schedule =")
+        for day, day_num, time, key in validated_entries:
             day_name = calendar.day_name[day_num].lower()
 
-            for time, key in times.items():
+            time_parts = [int(part) for part in time.split(':')]
+            if len(time_parts) == 2:
+                time_parts.append(0)
+            canonical_time = datetime.time(*time_parts).isoformat()
+            canonical_weekday = calendar.day_name[day_num]
+            entry_id = schedule_entry_id(
+                canonical_weekday, canonical_time, str(key)
+            )
+            context = {
+                'schedule_entry_id': entry_id,
+                'weekday': canonical_weekday,
+                'local_time': canonical_time,
+            }
 
-                if not _validate_time(time, **kwargs):
-                    continue
+            self.log.info(f"  ring every {day} at {time} with \"{key}\"")
 
-                time_parts = [int(part) for part in time.split(':')]
-                if len(time_parts) == 2:
-                    time_parts.append(0)
-                canonical_time = datetime.time(*time_parts).isoformat()
-                canonical_weekday = calendar.day_name[day_num]
-                entry_id = schedule_entry_id(
-                    canonical_weekday, canonical_time, str(key)
-                )
-                context = {
-                    'schedule_entry_id': entry_id,
-                    'weekday': canonical_weekday,
-                    'local_time': canonical_time,
-                }
+            wav = self.get_wav(key)
 
-                self.log.info(f"  ring every {day} at {time} with \"{key}\"")
+            if not os.path.isfile(wav):
+                err = f"File '{wav}' not found!"
+                self.log.error(err)
+                raise FileNotFoundError(err)
 
-                wav = self.get_wav(key)
-
-                if not os.path.isfile(wav):
-                    err = f"File '{wav}' not found!"
-                    self.log.error(err)
-                    raise FileNotFoundError(err)
-
-                getattr(schedule.every(), day_name).at(
-                    canonical_time, self.__timezone_name
-                ).do(
-                    self.ring,
-                    str(key),
-                    _schedule_context=context,
-                )
-                log_event(
-                    self.log,
-                    'schedule_entry_loaded',
-                    schedule_entry_id=entry_id,
-                    weekday=canonical_weekday,
-                    local_time=canonical_time,
-                    wav_key=str(key),
-                    **self._revision_fields(),
-                )
+            getattr(schedule.every(), day_name).at(
+                canonical_time, self.__timezone_name
+            ).do(
+                self.ring,
+                str(key),
+                _schedule_context=context,
+            )
+            log_event(
+                self.log,
+                'schedule_entry_loaded',
+                schedule_entry_id=entry_id,
+                weekday=canonical_weekday,
+                local_time=canonical_time,
+                wav_key=str(key),
+                **self._revision_fields(),
+            )
 
     def run_schedule(self, _test_mode: bool = False):
         """
@@ -1341,8 +1364,10 @@ def _validate_day(day: str, raise_on_error: bool = False):
     if day in days:
         return True
 
-    err = (f"Day abbrivation \"{day}\" is invalid! "
-           "Please provide any of \"{days.join{'|'}}\".")
+    err = (
+        f'Day abbreviation "{day}" is invalid! '
+        f'Please provide any of "{"|".join(days)}".'
+    )
 
     if raise_on_error:
         raise ValueError(err)
