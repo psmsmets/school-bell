@@ -5,17 +5,27 @@ import requests
 
 import school_bell.openholidays as openholidays_module
 from school_bell.openholidays import OpenHolidays
-from school_bell.utils import to_date
 
 countryIsoCode = 'BE'
 languageIsoCode = 'NL'
 subdivisionCode = None
 groupCode = 'BE-NL'
 
-startDate = to_date(date.today().strftime("%Y-01-01"))
-endDate = to_date(date.today().strftime("%Y-01-10"))
+startDate = date(2024, 1, 1)
+endDate = date(2024, 1, 10)
 
-oh = OpenHolidays(countryIsoCode, languageIsoCode, subdivisionCode, groupCode)
+PUBLIC_HOLIDAY = {
+    'startDate': '2024-01-01',
+    'endDate': '2024-01-01',
+    'type': 'Public',
+    'nationwide': True,
+}
+SCHOOL_HOLIDAY = {
+    'startDate': '2024-01-01',
+    'endDate': '2024-01-07',
+    'type': 'School',
+    'nationwide': False,
+}
 
 
 class FakeResponse:
@@ -31,6 +41,36 @@ class FakeResponse:
     def json(self):
         self.json_called = True
         return self.data
+
+
+@pytest.fixture
+def mocked_requests(monkeypatch):
+    """Return deterministic API data and record every OpenHolidays request."""
+    calls = []
+
+    def get(url, params=None, **kwargs):
+        calls.append((url, params, kwargs))
+        path = url.rsplit('/', 1)[-1]
+        requested_date = (params or {}).get(
+            'date', (params or {}).get('validFrom')
+        )
+        if requested_date != '2024-01-01':
+            return FakeResponse([])
+        if path in ('PublicHolidays', 'PublicHolidaysByDate'):
+            return FakeResponse([PUBLIC_HOLIDAY.copy()])
+        if path in ('SchoolHolidays', 'SchoolHolidaysByDate'):
+            return FakeResponse([SCHOOL_HOLIDAY.copy()])
+        return FakeResponse([])
+
+    monkeypatch.setattr(openholidays_module.requests, 'get', get)
+    return calls
+
+
+@pytest.fixture
+def oh(mocked_requests):
+    return OpenHolidays(
+        countryIsoCode, languageIsoCode, subdivisionCode, groupCode
+    )
 
 
 def test_initialization_does_not_make_request(monkeypatch):
@@ -94,48 +134,48 @@ def test_http_status_is_checked_before_json_is_parsed(monkeypatch):
     assert response.json_called is False
 
 
-def test_countryIsoCode():
+def test_countryIsoCode(oh):
     assert oh.countryIsoCode == countryIsoCode
 
 
-def test_languageIsoCode():
+def test_languageIsoCode(oh):
     assert oh.languageIsoCode == languageIsoCode
 
 
-def test_subdivisionCode():
+def test_subdivisionCode(oh):
     assert oh.subdivisionCode == subdivisionCode
 
 
-def test_groupCode():
+def test_groupCode(oh):
     assert oh.groupCode == groupCode
 
 
-def test_url():
+def test_url(oh):
     url = "https://openholidaysapi.org/swagger/v1/swagger.json"
     assert oh.url("swagger/v1/swagger.json") == url
 
 
-def test_title():
+def test_title(oh):
     assert isinstance(oh.title, str)
 
 
-def test_description():
+def test_description(oh):
     assert isinstance(oh.description, str)
 
 
-def test_version():
+def test_version(oh):
     assert isinstance(oh.version, str)
 
 
-def test_isHoliday_true():
+def test_isHoliday_true(oh):
     assert oh.isHoliday(startDate) is True
 
 
-def test_isHoliday_false():
+def test_isHoliday_false(oh):
     assert oh.isHoliday(endDate) is False
 
 
-def test_publicHolidays():
+def test_publicHolidays(oh):
     r = oh.publicHolidays(startDate, endDate)
     assert r[0]['startDate'] == startDate
     assert r[0]['endDate'] == startDate
@@ -143,16 +183,16 @@ def test_publicHolidays():
     assert r[0]['nationwide'] is True
 
 
-def test_publicHolidaysByDate():
+def test_publicHolidaysByDate(oh):
     r = oh.publicHolidaysByDate(startDate, languageIsoCode)
     assert r[0]['type'] == "Public"
 
 
-def test_schoolHolidays():
+def test_schoolHolidays(oh):
     r = oh.schoolHolidays(startDate, endDate)
     assert r[0]['type'] == "School"
 
 
-def test_schoolHolidaysByDate():
+def test_schoolHolidaysByDate(oh):
     r = oh.schoolHolidaysByDate(startDate, languageIsoCode)
     assert r[0]['type'] == "School"

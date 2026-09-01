@@ -697,7 +697,20 @@ def test_invalid_buzzer_pins(gpio_pins, fake_buzzers):
         create_buzzer(gpio_pins)
 
 
-def test_school_bell(device):
+def test_school_bell(device, monkeypatch):
+    monkeypatch.setattr(
+        school_bell_module.OpenHolidays,
+        'holidays',
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        school_bell_module, '_play', lambda *_args, **_kwargs: True
+    )
+    monkeypatch.setattr(
+        school_bell_module.schedule,
+        'run_all',
+        lambda delay_seconds=0: None,
+    )
     bell = SchoolBell(**create_args(device))
     assert bell.play(0) is True
     assert bell.ring(1) != bell.is_holiday()

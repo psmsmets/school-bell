@@ -67,6 +67,19 @@ Type ``school-bell --help`` for the usage.
       --version             Print the version and exit
 
 
+Testing
+-------
+
+Run the complete test suite from the repository root. Pytest imports
+``school_bell`` directly from the local ``src`` directory, so an editable
+installation is not required. External HTTP services are mocked and the suite
+can run without internet access.
+
+.. code-block:: sh
+
+    pytest
+
+
 Configuration (JSON)
 ====================
 
