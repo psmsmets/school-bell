@@ -26,7 +26,7 @@ def create_args(device):
     }
 
 
-def test_trigger_accepts_demo_dictionary(monkeypatch):
+def test_trigger_accepts_dictionary(monkeypatch):
     calls = []
     monkeypatch.setattr(
         school_bell_module, 'system_call',

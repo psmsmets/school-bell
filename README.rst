@@ -103,9 +103,6 @@ The following configuration shows the main scheduling and audio settings:
             "Thu": {"08:30": 0, "12:00": 0, "15:00": 0},
             "Fri": {"08:30": 0, "12:00": 0, "15:00": 0}
         },
-        "trigger": {
-            "pibell2": "${HOME}/samples"
-        },
         "wav": {
             "0": "SchoolBell-SoundBible.com-449398625.wav",
             "1": "ClassBell-SoundBible.com-1426436341.wav"
