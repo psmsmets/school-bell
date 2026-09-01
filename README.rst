@@ -293,6 +293,15 @@ Remote triggers
 ---------------
 
 The ``trigger`` setting maps remote SSH hosts to their WAVE root directory.
+Remote triggers are disabled by default. To enable one, add a ``trigger``
+mapping to the configuration:
+
+.. code-block:: json
+
+    "trigger": {
+        "pibell2": "${HOME}/samples"
+    }
+
 A remote trigger requires an SSH key to connect to the remote host.
 
 Generate a new SSH key named ``school-bell`` in
