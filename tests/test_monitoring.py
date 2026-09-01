@@ -135,6 +135,30 @@ def test_unavailable_remote_syslog_does_not_raise(monkeypatch):
     ) is None
 
 
+def test_remote_syslog_configuration_reuses_startup_handler(monkeypatch):
+    class FakeSyslogHandler(logging.Handler):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+
+    monkeypatch.setattr(
+        monitoring_module, 'ResilientSysLogHandler', FakeSyslogHandler
+    )
+    logger = logging.getLogger('test-reused-startup-syslog')
+    config = {
+        'host': 'graylog.example.com',
+        'port': 1514,
+        'protocol': 'udp',
+    }
+
+    first = configure_remote_syslog(logger, config, version='1.2.3')
+    second = configure_remote_syslog(logger, config, version='1.2.3')
+    try:
+        assert second is first
+        assert logger.handlers.count(first) == 1
+    finally:
+        logger.removeHandler(first)
+
+
 def test_invalid_monitoring_does_not_stop_school_bell():
     bell = SchoolBell(
         schedule={},

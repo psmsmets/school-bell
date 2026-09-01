@@ -131,6 +131,15 @@ def configure_remote_syslog(
     if facility not in logging.handlers.SysLogHandler.facility_names:
         raise ValueError(f'Unknown syslog facility: {facility}')
     socktype = socket.SOCK_DGRAM if protocol == 'udp' else socket.SOCK_STREAM
+
+    # Startup monitoring is configured before SchoolBell is constructed so
+    # failures in its early validation can also be reported. Reuse that
+    # handler when SchoolBell subsequently configures monitoring itself.
+    destination = (host, port, protocol, facility)
+    for existing in logger.handlers:
+        if getattr(existing, '_school_bell_syslog', None) == destination:
+            return existing
+
     try:
         handler = ResilientSysLogHandler(
             address=(host, port), facility=facility, socktype=socktype
@@ -148,6 +157,7 @@ def configure_remote_syslog(
         device_id=device_id,
         labels=labels,
     ))
+    handler._school_bell_syslog = destination
     logger.addHandler(handler)
     logger.info(
         'Remote syslog enabled: %s:%s via %s',
