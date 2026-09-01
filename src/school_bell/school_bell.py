@@ -156,7 +156,7 @@ class SchoolBell(object):
         self.timeout = timeout or 10
         self.openholidays = holidays or None
         self._configure_disable_calendar(disable_calendar)
-        self.trigger = trigger or dict()
+        self.trigger = {} if trigger is None else trigger
         self.wav = wav or dict()
 
         self._configure_manual_bell(manual_bell)
@@ -796,18 +796,32 @@ class SchoolBell(object):
         return self.__trigger
 
     @trigger.setter
-    def trigger(self, value: list = None):
+    def trigger(self, value: dict = None):
         """Set the remote linux devices to trigger over ssh.
         """
         if not hasattr(self, '__trigger'):
             self.__trigger = dict()
 
-        if not (isinstance(value, list) and len(value) != 0):
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            raise TypeError('trigger should be a dictionary!')
+
+        invalid = [
+            (host, root) for host, root in value.items()
+            if not isinstance(host, str) or not host.strip()
+            or not isinstance(root, str)
+        ]
+        if invalid:
+            raise ValueError(
+                'trigger should map non-empty host strings to root strings!'
+            )
+        if not value:
             return
 
         self.log.info("trigger =")
 
-        for host, root in value:
+        for host, root in value.items():
             self.log.info(f"  remote ring {host}")
             self.add_trigger(host, root)
 
@@ -815,8 +829,8 @@ class SchoolBell(object):
         """Add a remote linux device to trigger over ssh.
         """
         root = root or ''
-        cmd = self._ssh(host) + ["/usr/bin/aplay", "--help"]
-        if not system_call(cmd, self.log):
+        cmd = _ssh(host, self.timeout) + ["/usr/bin/aplay", "--help"]
+        if not system_call(cmd, self.log, timeout=self.timeout):
             err = f"remote ring test for {host} failed!"
             self.log.error(err)
             raise RuntimeError(err)
@@ -1287,9 +1301,10 @@ def _play_remote(host: str, wav: str, test: bool = False, timeout: int = None,
     """Internal function to play a remove wav file over ssh. Returns `True` on
     success.
     """
-    cmd = _ssh(host, timeout) + __play_test if test else __play + [wav, "&"]
+    remote_command = __play_test if test else __play + [wav, "&"]
+    cmd = _ssh(host, timeout) + remote_command
 
-    return system_call(cmd, logger)
+    return system_call(cmd, logger, timeout=timeout)
 
 
 def _play(wav: str, test: bool = False, device: str = None,
