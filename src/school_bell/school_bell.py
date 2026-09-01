@@ -80,6 +80,7 @@ class SchoolBell(object):
         timezone: str = 'Europe/Brussels',
         disable_calendar: str = None,
         manual_bell: dict = None,
+        check: bool = False,
     ):
         """Initialize the SchoolBell object
         """
@@ -90,6 +91,7 @@ class SchoolBell(object):
         if monitoring is not None and not isinstance(monitoring, dict):
             raise TypeError('monitoring should be a dictionary!')
 
+        self.__check = bool(check)
         self.__started_at = datetime.datetime.now(datetime.timezone.utc)
         self.__hostname = socket.gethostname()
         self.__state_lock = RLock()
@@ -128,15 +130,19 @@ class SchoolBell(object):
         self.__remote_syslog_handler = None
         self.__schedule_config = copy.deepcopy(schedule or {})
         self.__logger = init_logger(prog, debug or False)
+        if self.__check:
+            # Check mode prints its own stable, concise result lines.
+            self.__logger.disabled = True
         try:
-            self.__remote_syslog_handler = configure_remote_syslog(
-                logger=self.__logger,
-                config=self.__monitoring.get('syslog'),
-                version=self.reported_version,
-                hostname=self.__hostname,
-                device_id=self.__device_id,
-                labels=self.__monitoring_labels,
-            )
+            if not self.__check:
+                self.__remote_syslog_handler = configure_remote_syslog(
+                    logger=self.__logger,
+                    config=self.__monitoring.get('syslog'),
+                    version=self.reported_version,
+                    hostname=self.__hostname,
+                    device_id=self.__device_id,
+                    labels=self.__monitoring_labels,
+                )
         except (TypeError, ValueError) as err:
             self.__logger.error('Remote syslog disabled: %s', err)
         self.__alsa = sys.platform != "darwin"
@@ -170,9 +176,10 @@ class SchoolBell(object):
             scheduled_jobs=self.scheduled_jobs,
             **self._revision_fields(),
         )
-        self._start_monitoring()
-        self._configure_heartbeat()
-        log_event(self.log, 'service_started')
+        if not self.__check:
+            self._start_monitoring()
+            self._configure_heartbeat()
+            log_event(self.log, 'service_started')
 
     @property
     def reported_version(self) -> str:
@@ -386,6 +393,8 @@ class SchoolBell(object):
             raise KeyError(
                 'manual_bell.wav_key is not related to any sample!'
             )
+        if self.__check:
+            return
         if not is_raspberry_pi():
             self.log.warning(
                 'Host is not a Raspberry Pi: manual bell button disabled!'
@@ -414,6 +423,8 @@ class SchoolBell(object):
             timeout=self.timeout,
             logger=self.log,
         )
+        if self.__check:
+            return
         self.__disable_calendar.refresh()
         schedule_module.every().day.at(
             '00:05', self.__timezone_name
@@ -468,6 +479,8 @@ class SchoolBell(object):
         self.__buzzer = []
         self.__buzzer_pins = gpio_pins
         if not gpio_pins:
+            return
+        if self.__check:
             return
 
         if is_raspberry_pi():
@@ -653,6 +666,8 @@ class SchoolBell(object):
                 languageIsoCode=groupCode.split('-')[1],
                 groupCode=groupCode
             )
+            if self.__check:
+                return
             self._request_holidays()
             schedule.every().day.at("00:00").do(self._request_holidays)
         else:
@@ -823,7 +838,10 @@ class SchoolBell(object):
 
         for host, root in value.items():
             self.log.info(f"  remote ring {host}")
-            self.add_trigger(host, root)
+            if self.__check:
+                self.__trigger[str(host)] = str(root)
+            else:
+                self.add_trigger(host, root)
 
     def add_trigger(self, host: str, root: str = None):
         """Add a remote linux device to trigger over ssh.
@@ -1262,6 +1280,9 @@ class SchoolBell(object):
                 err = f"File '{wav}' not found!"
                 self.log.error(err)
                 raise FileNotFoundError(err)
+
+            if self.__check:
+                continue
 
             getattr(schedule.every(), day_name).at(
                 canonical_time, self.__timezone_name

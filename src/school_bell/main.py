@@ -2,6 +2,7 @@
 
 # absolute imports
 import argparse
+import datetime
 import json
 import pkgutil
 import os
@@ -18,6 +19,8 @@ from .utils import init_logger, system_call
 from .school_bell import SchoolBell
 from .identifiers import content_hash
 from .monitoring import configure_remote_syslog
+from .disable_calendar import DisableCalendar
+from .openholidays import OpenHolidays
 
 # Set path of demo files
 share = os.path.join(sys.exec_prefix, 'share', 'school-bell')
@@ -92,6 +95,9 @@ def _sensitive_values(config):
             values.add(str(value))
 
     visit(config)
+    if isinstance(config, dict) and config.get('disable_calendar'):
+        # Published calendar URLs commonly embed bearer-like credentials.
+        values.add(str(config['disable_calendar']))
     return values
 
 
@@ -221,9 +227,12 @@ def _initialize_service(args, logger, prog, info):
         # Hash supplied JSON before adding command-line/runtime-only values.
         config['config_hash'] = content_hash(config)
         config['schedule_hash'] = content_hash(config['schedule'])
-        config['test'] = args.test
+        # --check always remains non-operational, even if combined with
+        # hardware-oriented command-line flags.
+        config['test'] = args.test and not args.check
+        config['check'] = args.check
         config['debug'] = args.debug
-        config['prog'] = prog
+        config['prog'] = f'{prog}.check-internal' if args.check else prog
         config['info'] = info
 
         phase = 'service_initialization'
@@ -231,6 +240,70 @@ def _initialize_service(args, logger, prog, info):
     except Exception as error:
         _report_startup_failure(logger, error, phase, config)
         raise
+
+
+def _check_configuration(args, logger, prog, info):
+    """Validate configuration and resources without operational side effects."""
+    try:
+        obj = _initialize_service(args, logger, prog, info)
+    except Exception as error:
+        config = None
+        try:
+            config = _load_config(args.config)
+        except Exception:
+            pass
+        print('ERROR: Configuration: '
+              f'{_safe_startup_message(error, config)}')
+        return 1
+
+    config = _load_config(args.config)
+    timeout = int(config.get('timeout') or 10)
+    failed = False
+    try:
+        print('OK: Configuration is valid.')
+        print(f'OK: {len(config["wav"])} configured WAVE file(s) exist.')
+
+        holidays = config.get('holidays')
+        if holidays:
+            try:
+                country, language = holidays.split('-', 1)
+                client = OpenHolidays(
+                    countryIsoCode=country,
+                    languageIsoCode=language,
+                    groupCode=holidays,
+                )
+                today = datetime.date.today()
+                values = client.holidays(
+                    str(today), str(today + datetime.timedelta(days=180)),
+                    timeout=timeout,
+                )
+                if not isinstance(values, list):
+                    raise ValueError('API response is not a holiday list')
+                print(f'OK: OpenHolidays returned {len(values)} holiday(s).')
+            except Exception as error:
+                failed = True
+                print('ERROR: OpenHolidays could not be retrieved and parsed '
+                      f'({type(error).__name__}).')
+        else:
+            print('NOT CONFIGURED: OpenHolidays.')
+
+        calendar_url = config.get('disable_calendar')
+        if calendar_url:
+            calendar = DisableCalendar(
+                calendar_url,
+                timezone=config.get('timezone', 'Europe/Brussels'),
+                timeout=timeout,
+            )
+            if calendar.refresh():
+                print('OK: Disable calendar parsed successfully.')
+            else:
+                failed = True
+                print('ERROR: Disable calendar could not be retrieved and parsed.')
+        else:
+            print('NOT CONFIGURED: Disable calendar.')
+    finally:
+        obj.close()
+    return 1 if failed else 0
 
 
 def main():
@@ -276,6 +349,12 @@ def main():
               '(default: %(default)s)')
     )
     parser.add_argument(
+        '--check', action='store_true',
+        default=False,
+        help=('Validate configuration, files and external services without '
+              'starting the scheduler or activating bells')
+    )
+    parser.add_argument(
         '--update', action=SelfUpdate, metavar='..', nargs='?', type=str,
         default='main',
         help=('Update %(prog)s from git. Optionally set the branch '
@@ -293,6 +372,8 @@ def main():
     args = parser.parse_args()
 
     logger = init_logger(prog, args.debug)
+    if args.check:
+        return _check_configuration(args, logger, prog, info)
     obj = _initialize_service(args, logger, prog, info)
 
     # play a test file or run the schedule
@@ -306,4 +387,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
