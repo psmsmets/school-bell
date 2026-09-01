@@ -63,6 +63,8 @@ Type ``school-bell --help`` for the usage.
       --demo-service        Print the demo systemctl service for the current user and exit
       --test                Test each configured GPIO pin and play one second of
                             each WAVE audio file at startup (default: False)
+      --check               Validate configuration, files and external services
+                            without starting the scheduler or activating bells
       --update [..]         Update school-bell from git. Optionally set the branch (default: main)
       --version             Print the version and exit
 
@@ -182,6 +184,33 @@ before the next pin is tested. The configured WAVE samples are tested as well.
 .. code-block:: sh
 
     school-bell schema.json --test
+
+Non-destructive health check
+----------------------------
+
+Use ``--check`` for automated, remote, or pre-deployment validation:
+
+.. code-block:: sh
+
+    school-bell schema.json --check
+
+The command validates the complete active configuration and confirms that all
+configured WAVE files exist. If ``holidays`` is configured, it retrieves and
+parses the OpenHolidays response and reports the number of holidays returned.
+If ``disable_calendar`` is configured, it downloads and parses the iCalendar
+document. Network requests use the configured ``timeout`` and are not retried
+indefinitely. Calendar URLs are never included in command output or logs,
+because these URLs often contain credentials or access tokens.
+
+Each applicable result is labelled ``OK``, ``WARNING``, ``ERROR``, or
+``NOT CONFIGURED``. Exit status 0 means every required check succeeded; a
+non-zero status means the configuration, a local resource, or an external
+service could not be validated.
+
+Unlike ``--test``, ``--check`` never plays audio, changes a GPIO output,
+contacts remote bells, starts monitoring listeners, or starts/registers the
+scheduler. ``--test`` remains the explicit hardware-oriented test and may ring
+outputs and play samples.
 
 Manual bell button
 ------------------

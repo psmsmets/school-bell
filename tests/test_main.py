@@ -5,6 +5,8 @@ import sys
 import pytest
 
 import school_bell.main as main_module
+import school_bell.openholidays as openholidays_module
+import school_bell.disable_calendar as calendar_module
 from school_bell.identifiers import content_hash
 
 
@@ -174,3 +176,89 @@ def test_logging_failure_does_not_replace_startup_exception(monkeypatch):
             main_module.main()
     finally:
         logging.getLogger('school-bell').removeHandler(handler)
+
+
+class _CheckResponse:
+    def __init__(self, content=b'', json_value=None, status=200):
+        self.content = content
+        self._json_value = json_value
+        self.status_code = status
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError('HTTP failure')
+
+    def json(self):
+        return self._json_value
+
+
+def test_check_is_non_destructive_and_validates_external_resources(
+    monkeypatch, tmp_path, capsys, caplog,
+):
+    (tmp_path / 'bell.wav').write_bytes(b'RIFF')
+    secret_url = 'https://calendar.example/private-token/calendar.ics'
+    supplied = {
+        'schedule': {'Mon': {'08:30': 0}},
+        'wav': {'0': 'bell.wav'},
+        'root': str(tmp_path),
+        'holidays': 'BE-NL',
+        'disable_calendar': secret_url,
+        'timeout': 3,
+        'buzz_gpio': [17],
+        'trigger': {'remote-bell': '/samples'},
+    }
+    calls = []
+
+    def get(url, *_args, **kwargs):
+        if url == secret_url:
+            calls.append(('calendar', kwargs['timeout']))
+            return _CheckResponse(content=(
+                b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\n'
+                b'PRODID:-//check//EN\r\nEND:VCALENDAR\r\n'
+            ))
+        calls.append(('holiday', kwargs['timeout']))
+        return _CheckResponse(json_value=[{
+            'startDate': '2026-09-01', 'endDate': '2026-09-01',
+        }])
+
+    monkeypatch.setattr(openholidays_module.requests, 'get', get)
+    monkeypatch.setattr(main_module, '_configure_startup_monitoring', lambda *_: None)
+    monkeypatch.setattr(sys, 'argv', [
+        'school-bell', json.dumps(supplied), '--check', '--test',
+    ])
+
+    assert main_module.main() == 0
+
+    output = capsys.readouterr().out
+    assert 'OK: Configuration is valid.' in output
+    assert 'OK: 1 configured WAVE file(s) exist.' in output
+    assert 'OK: OpenHolidays returned 2 holiday(s).' in output
+    assert 'OK: Disable calendar parsed successfully.' in output
+    assert calls == [('holiday', 3), ('holiday', 3), ('calendar', 3)]
+    assert secret_url not in output
+    assert secret_url not in caplog.text
+
+
+def test_check_failure_is_nonzero_and_does_not_expose_calendar_url(
+    monkeypatch, tmp_path, capsys, caplog,
+):
+    (tmp_path / 'bell.wav').write_bytes(b'RIFF')
+    secret_url = 'https://calendar.example/secret/calendar.ics'
+    supplied = {
+        'schedule': {}, 'wav': {'0': 'bell.wav'}, 'root': str(tmp_path),
+        'disable_calendar': secret_url,
+    }
+    monkeypatch.setattr(
+        calendar_module.requests, 'get',
+        lambda *_args, **_kwargs: _CheckResponse(content=b'not a calendar'),
+    )
+    monkeypatch.setattr(main_module, '_configure_startup_monitoring', lambda *_: None)
+    monkeypatch.setattr(
+        sys, 'argv', ['school-bell', json.dumps(supplied), '--check']
+    )
+
+    assert main_module.main() != 0
+    output = capsys.readouterr().out
+    assert 'ERROR: Disable calendar' in output
+    assert secret_url not in output
+    assert secret_url not in caplog.text
