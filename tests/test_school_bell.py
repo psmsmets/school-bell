@@ -109,6 +109,47 @@ def test_validate_time():
     assert _validate_time("00:00:60") is False
 
 
+def test_startup_rejects_invalid_weekday_without_loading_schedule():
+    school_bell_module.schedule.clear()
+    schedule = {
+        'Mon': {'08:30': '0'},
+        'Funday': {'09:00': '0'},
+    }
+
+    try:
+        with pytest.raises(ValueError) as error:
+            SchoolBell(
+                schedule=schedule,
+                wav={'0': 'ClassBell-SoundBible.com-1426436341.wav'},
+                root=f'{getcwd()}/samples',
+            )
+
+        assert "schedule['Funday']" in str(error.value)
+        assert 'Funday' in str(error.value)
+        assert school_bell_module.schedule.jobs == []
+    finally:
+        school_bell_module.schedule.clear()
+
+
+def test_startup_rejects_invalid_time_without_loading_schedule():
+    school_bell_module.schedule.clear()
+    schedule = {'Mon': {'08:30': '0', '24:00': '0'}}
+
+    try:
+        with pytest.raises(ValueError) as error:
+            SchoolBell(
+                schedule=schedule,
+                wav={'0': 'ClassBell-SoundBible.com-1426436341.wav'},
+                root=f'{getcwd()}/samples',
+            )
+
+        assert "schedule['Mon']['24:00']" in str(error.value)
+        assert '24:00' in str(error.value)
+        assert school_bell_module.schedule.jobs == []
+    finally:
+        school_bell_module.schedule.clear()
+
+
 class FakeBuzzer:
     instances = []
     events = []
