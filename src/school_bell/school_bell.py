@@ -1322,7 +1322,7 @@ class SchoolBell(object):
                 self.__scheduler_running = False
 
 
-def _ssh(self, host: str, timeout: int = 10):
+def _ssh(host: str, timeout: int = 10):
     """Internal function wrapping the ssh command.
     """
     return ["/usr/bin/ssh",

@@ -26,7 +26,7 @@ def create_args(device):
     }
 
 
-def test_trigger_accepts_demo_dictionary(monkeypatch):
+def test_trigger_accepts_dictionary(monkeypatch):
     calls = []
     monkeypatch.setattr(
         school_bell_module, 'system_call',
@@ -44,6 +44,15 @@ def test_trigger_accepts_demo_dictionary(monkeypatch):
     )
 
     assert bell.trigger == {'pibell2': '${HOME}/samples'}
+    assert calls[0][0] == [
+        '/usr/bin/ssh',
+        '-t',
+        '-o', 'ConnectTimeout=3',
+        '-o', 'StrictHostKeyChecking=no',
+        'pibell2',
+        '/usr/bin/aplay', '--help',
+    ]
+    assert all(isinstance(argument, str) for argument in calls[0][0])
     assert calls[0][1] == {'timeout': 3}
 
 
@@ -82,7 +91,10 @@ def test_remote_playback_passes_hard_timeout(monkeypatch):
         'pibell2', '/samples/bell.wav', timeout=4
     ) is True
     assert calls[0][0][0] == '/usr/bin/ssh'
+    assert 'ConnectTimeout=4' in calls[0][0]
+    assert calls[0][0][6] == 'pibell2'
     assert calls[0][0][-2:] == ['/samples/bell.wav', '&']
+    assert all(isinstance(argument, str) for argument in calls[0][0])
     assert calls[0][1] == {'timeout': 4}
 
 
