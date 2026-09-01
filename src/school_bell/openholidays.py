@@ -16,6 +16,13 @@ class OpenHolidays(object):
     """Retrieve public and school holidays from OpenHolidays API.
     """
 
+    DEFAULT_TIMEOUT = 10
+    _API_INFO = {
+        'title': 'OpenHolidays API',
+        'description': 'Public and school holidays API',
+        'version': '',
+    }
+
     def __init__(self, countryIsoCode: str = None, languageIsoCode: str = None,
                  subdivisionCode: str = None, groupCode: str = None):
         """Initialize the Open Holidays API object
@@ -24,7 +31,9 @@ class OpenHolidays(object):
         self.__languageIsoCode = languageIsoCode
         self.__subdivisionCode = subdivisionCode
         self.__groupCode = groupCode
-        self.__swagger = self._get("swagger/v1/swagger.json")
+        # API metadata is informational and must not make construction depend
+        # on network availability.
+        self.__swagger = {'info': self._API_INFO.copy()}
         self.__is_holiday_request = None
         self.__is_holiday = False
 
@@ -96,7 +105,11 @@ class OpenHolidays(object):
         """Returns the parsed json object of the get request to the API.
         """
         parse_dates = kwargs.pop('parse_dates', True)
-        data = json.loads(requests.get(self.url(path), *args, **kwargs).text)
+        if kwargs.get('timeout') is None:
+            kwargs['timeout'] = self.DEFAULT_TIMEOUT
+        response = requests.get(self.url(path), *args, **kwargs)
+        response.raise_for_status()
+        data = response.json()
         if parse_dates:
             _parse_holiday_dates(data)
         return data

@@ -684,10 +684,12 @@ class SchoolBell(object):
             self.__holidays_last_update = startDate
             self.log.debug("holidays request completed.")
             return True
-        except requests.exceptions.RequestException as err:
-            self.log.warning("holidays request failed. Last update on {}"
-                             .format(self.__holidays_last_update))
-            self.log.debug(err)
+        except (requests.exceptions.RequestException, ValueError):
+            self.log.warning(
+                "holidays unavailable; local bell scheduling remains active. "
+                "Last update on %s",
+                self.__holidays_last_update,
+            )
             return False
 
     def is_holiday(self, date: datetime.date = None) -> bool:
