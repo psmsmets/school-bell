@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from datetime import datetime, date
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, TimeoutExpired
 
 
 __all__ = ['init_logger', 'is_raspberry_pi', 'system_call',
@@ -61,9 +61,19 @@ def system_call(
     log = log if isinstance(log, logging.Logger) else init_logger(debug=True)
     log.debug(' '.join(command))
 
+    timeout = kwargs.pop('timeout', None)
     p = Popen(command, stdout=PIPE, stderr=PIPE, **kwargs)
 
-    output, error = p.communicate()
+    try:
+        output, error = p.communicate(timeout=timeout)
+    except TimeoutExpired:
+        p.kill()
+        output, error = p.communicate()
+        log.error(
+            'Command timed out after %s seconds: %s',
+            timeout, ' '.join(command),
+        )
+        return False
 
     if output:
         log.debug(output.decode("utf-8"))

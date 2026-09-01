@@ -26,6 +26,66 @@ def create_args(device):
     }
 
 
+def test_trigger_accepts_demo_dictionary(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        school_bell_module, 'system_call',
+        lambda command, logger, **kwargs: calls.append(
+            (command, kwargs)
+        ) or True,
+    )
+
+    bell = SchoolBell(
+        schedule={},
+        wav={'0': 'SchoolBell-SoundBible.com-449398625.wav'},
+        root=f'{getcwd()}/samples',
+        trigger={'pibell2': '${HOME}/samples'},
+        timeout=3,
+    )
+
+    assert bell.trigger == {'pibell2': '${HOME}/samples'}
+    assert calls[0][1] == {'timeout': 3}
+
+
+@pytest.mark.parametrize('trigger', [[], 'pibell2', 1])
+def test_trigger_rejects_non_dictionary_configuration(trigger):
+    with pytest.raises(TypeError, match='trigger should be a dictionary'):
+        SchoolBell(
+            schedule={}, wav={}, root=f'{getcwd()}/samples',
+            trigger=trigger,
+        )
+
+
+@pytest.mark.parametrize('trigger', [
+    {'': '/samples'},
+    {1: '/samples'},
+    {'pibell2': None},
+])
+def test_trigger_rejects_invalid_dictionary_entries(trigger):
+    with pytest.raises(ValueError, match='non-empty host strings'):
+        SchoolBell(
+            schedule={}, wav={}, root=f'{getcwd()}/samples',
+            trigger=trigger,
+        )
+
+
+def test_remote_playback_passes_hard_timeout(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        school_bell_module, 'system_call',
+        lambda command, logger, **kwargs: calls.append(
+            (command, kwargs)
+        ) or True,
+    )
+
+    assert school_bell_module._play_remote(
+        'pibell2', '/samples/bell.wav', timeout=4
+    ) is True
+    assert calls[0][0][0] == '/usr/bin/ssh'
+    assert calls[0][0][-2:] == ['/samples/bell.wav', '&']
+    assert calls[0][1] == {'timeout': 4}
+
+
 def test_validate_day():
     assert _validate_day('Mon') is True
     assert _validate_day('Tue') is True
