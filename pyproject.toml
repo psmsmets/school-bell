@@ -43,7 +43,8 @@ dependencies = [
     "pytz>=2021.1",
     "icalendar>=6,<8",
     "recurring-ical-events>=3,<4",
-    "pydantic>=2.13,<3",
+    "pydantic>=2.13,<3; implementation_name != 'pypy' or python_version >= '3.11'",
+    "pydantic>=2.12.5,<2.13; implementation_name == 'pypy' and python_version < '3.11'",
 ]
 
 [project.urls]
