@@ -248,6 +248,7 @@ def test_manual_remote_bell_configuration_is_validated():
     }, output_pins=[])
 
     assert config['remote_bells'] == [{
+        'transport': 'ssh',
         'host': 'bell-02.local',
         'user': 'pi',
         'command': ['/usr/local/bin/manual-bell', '--now'],
@@ -323,4 +324,53 @@ def test_manual_remote_ssh_does_not_block_local_bell(
     assert failure['remote_user'] == 'pi'
     assert any(
         event['event'] == 'manual_bell_completed' for event in events
+    )
+
+
+def test_manual_bell_can_trigger_remote_webhook(
+    gpio, events, monkeypatch
+):
+    called = Event()
+    request = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+    def post(url, **kwargs):
+        request.update({'url': url, **kwargs})
+        called.set()
+        return Response()
+
+    monkeypatch.setattr(bell_module.requests, 'post', post)
+    monkeypatch.setattr(bell_module, '_play', lambda *_args: True)
+    obj = bell(manual_bell={
+        'gpio': 17,
+        'wav_key': '0',
+        'remote_bells': [{
+            'transport': 'webhook',
+            'url': 'https://bell-02.example/bell',
+            'auth': {'type': 'bearer', 'token': 'remote-secret'},
+            'headers': {'X-School': 'VITO'},
+            'timeout': 4,
+        }],
+    })
+    FakeButton.instances[0].press()
+    assert called.wait(1)
+    obj.close()
+
+    assert request == {
+        'url': 'https://bell-02.example/bell',
+        'json': {'wav_key': '0'},
+        'headers': {
+            'X-School': 'VITO',
+            'Authorization': 'Bearer remote-secret',
+        },
+        'auth': None,
+        'timeout': 4,
+    }
+    assert any(
+        event['event'] == 'manual_remote_trigger'
+        and event['transport'] == 'webhook'
+        for event in events
     )

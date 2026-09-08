@@ -30,6 +30,7 @@ from .monitoring import (
 from .manual_bell import ManualBellInput
 from .playback import AudioPlayback, playback_command
 from .utils import init_logger, is_raspberry_pi, system_call
+from .webhook import WebhookServer
 try:
     from .version import version
 except (ValueError, ModuleNotFoundError, SyntaxError):
@@ -80,6 +81,7 @@ class SchoolBell(object):
         timezone: str = 'Europe/Brussels',
         disable_calendar: str = None,
         manual_bell: dict = None,
+        webhook: dict = None,
         check: bool = False,
     ):
         """Initialize the SchoolBell object
@@ -127,6 +129,7 @@ class SchoolBell(object):
                 'underscores, and start with a letter!'
             )
         self.__monitoring_server = None
+        self.__webhook_server = None
         self.__remote_syslog_handler = None
         self.__schedule_config = copy.deepcopy(schedule or {})
         self.__logger = init_logger(prog, debug or False)
@@ -170,6 +173,7 @@ class SchoolBell(object):
         # Create schedule
         self.create_schedule(schedule)
         self.__schedule_loaded = isinstance(schedule, dict)
+        self._configure_webhook(webhook)
         log_event(
             self.log,
             'schedule_loaded',
@@ -379,6 +383,9 @@ class SchoolBell(object):
         if self.__monitoring_server is not None:
             self.__monitoring_server.stop()
             self.__monitoring_server = None
+        if self.__webhook_server is not None:
+            self.__webhook_server.stop()
+            self.__webhook_server = None
         if self.__remote_syslog_handler is not None:
             self.log.removeHandler(self.__remote_syslog_handler)
             self.__remote_syslog_handler.close()
@@ -410,6 +417,60 @@ class SchoolBell(object):
             'manual bell = GPIO %s (%s)',
             validated['gpio'], validated['mode']
         )
+
+    def _configure_webhook(self, config: dict = None):
+        """Validate and start the optional authenticated bell endpoint."""
+        if config is None:
+            return
+        if not isinstance(config, dict):
+            raise TypeError('webhook should be a dictionary!')
+        if not config.get('enabled', False):
+            return
+        host = config.get('host', '127.0.0.1')
+        if not isinstance(host, str) or not host:
+            raise ValueError('webhook.host should be a non-empty string!')
+        token = config.get('token')
+        if not isinstance(token, str) or not token:
+            raise ValueError('webhook.token should be a non-empty string!')
+        port = self._positive_webhook_integer(config, 'port', 8081, False)
+        rate_limit = self._positive_webhook_integer(
+            config, 'rate_limit', 10
+        )
+        rate_window = self._positive_webhook_integer(
+            config, 'rate_window', 60
+        )
+        if self.__check:
+            return
+        self.__webhook_server = WebhookServer(
+            host=host,
+            port=port,
+            token=token,
+            bell_provider=self.trigger_webhook,
+            logger=self.log,
+            rate_limit=rate_limit,
+            rate_window=rate_window,
+        ).start()
+        bound_host, bound_port = self.__webhook_server.address[:2]
+        self.log.info(
+            'Bell webhook listening on %s:%s', bound_host, bound_port
+        )
+
+    @staticmethod
+    def _positive_webhook_integer(config, key, default, positive=True):
+        value = config.get(key, default)
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise TypeError(f'webhook.{key} should be an integer!')
+        if (positive and value <= 0) or (not positive and value < 0):
+            qualifier = 'positive' if positive else 'non-negative'
+            raise ValueError(f'webhook.{key} should be {qualifier}!')
+        return value
+
+    @property
+    def webhook_address(self):
+        """Return the bound webhook address, primarily for diagnostics."""
+        if self.__webhook_server is None:
+            return None
+        return self.__webhook_server.address
 
     def _configure_disable_calendar(self, url: str = None):
         """Configure startup and daily refresh of a public calendar."""
@@ -1001,6 +1062,34 @@ class SchoolBell(object):
             key, source='scheduled', event_fields=event_fields, **kwargs
         )
 
+    def trigger_webhook(self, key: str):
+        """Trigger a configured sample and translate the result to HTTP."""
+        key = str(key)
+        if key not in self.wav:
+            log_event(
+                self.log,
+                'webhook_bell_rejected',
+                status='rejected',
+                level=30,
+                trigger_source='webhook',
+                wav_key=key,
+                rejection_reason='invalid_wav_key',
+            )
+            return 400, {'error': 'invalid wav_key'}
+        try:
+            accepted = self.trigger_bell(
+                key,
+                source='webhook',
+                mode='once',
+                respect_calendar=False,
+                include_remote=False,
+            )
+        except Exception:
+            return 503, {'error': 'playback unavailable'}
+        if not accepted:
+            return 409, {'error': 'bell active'}
+        return 202, {'status': 'accepted', 'wav_key': key}
+
     def trigger_bell(
         self, key: str, source: str, mode: str = 'once',
         cancel_event: Event = None, respect_calendar: bool = True,
@@ -1016,8 +1105,7 @@ class SchoolBell(object):
         }
         if source_gpio is not None:
             source_fields['source_gpio'] = source_gpio
-        if source == 'manual_gpio':
-            log_event(self.log, 'manual_bell_triggered', **source_fields)
+        self._log_source_event(source, 'triggered', **source_fields)
         if mode not in ('once', 'hold'):
             raise ValueError('Bell mode should be once or hold!')
         if not self.__bell_lock.acquire(blocking=False):
@@ -1027,6 +1115,14 @@ class SchoolBell(object):
                 self.log, 'bell_trigger_ignored', status='skipped',
                 reason='bell_active',
                 active_trigger_source=(active or {}).get('source'),
+                **source_fields,
+            )
+            self._log_source_event(
+                source,
+                'rejected',
+                status='rejected',
+                level=30,
+                rejection_reason='bell_active',
                 **source_fields,
             )
             return False
@@ -1050,45 +1146,63 @@ class SchoolBell(object):
             cancelled = self._execute_bell(
                 key, mode, cancel_event, include_remote, event_fields
             )
-            if source == 'manual_gpio':
-                log_event(
-                    self.log,
-                    ('manual_bell_cancelled' if cancelled
-                     else 'manual_bell_completed'),
-                    status='cancelled' if cancelled else 'success',
-                    duration_seconds=round(monotonic() - started, 3),
-                    reason='button_released' if cancelled else None,
-                    **source_fields,
-                )
+            phase = 'cancelled' if cancelled else 'completed'
+            self._log_source_event(
+                source,
+                phase,
+                status='cancelled' if cancelled else 'success',
+                duration_seconds=round(monotonic() - started, 3),
+                reason='button_released' if cancelled else None,
+                **source_fields,
+            )
             return True
         except Exception as err:
-            if source == 'manual_gpio':
-                log_event(
-                    self.log, 'manual_bell_failed', status='failure',
-                    level=40,
-                    duration_seconds=round(monotonic() - started, 3),
-                    error_category='manual_bell_error', error=str(err),
-                    **source_fields,
-                )
+            self._log_source_event(
+                source,
+                'failed',
+                status='failure',
+                level=40,
+                duration_seconds=round(monotonic() - started, 3),
+                error_category=f'{source}_bell_error',
+                error=str(err),
+                **source_fields,
+            )
             raise
         finally:
             with self.__state_lock:
                 self.__active_bell = None
             self.__bell_lock.release()
 
+    def _log_source_event(self, source: str, phase: str, **fields):
+        """Emit lifecycle events for externally initiated bell signals."""
+        prefix = {
+            'manual_gpio': 'manual_bell',
+            'webhook': 'webhook_bell',
+        }.get(source)
+        if prefix is None:
+            return
+        if source == 'manual_gpio' and phase == 'failed':
+            fields['error_category'] = 'manual_bell_error'
+        log_event(self.log, f'{prefix}_{phase}', **fields)
+
     def _dispatch_manual_remote_bells(
         self, remote_bells: list, event_fields: dict,
     ) -> None:
-        """Start configured manual SSH actions without delaying local I/O."""
+        """Start configured remote actions without delaying local I/O."""
         for index, remote in enumerate(remote_bells):
+            function = (
+                self._trigger_manual_remote_webhook
+                if remote['transport'] == 'webhook'
+                else self._trigger_manual_remote_ssh
+            )
             Thread(
-                target=self._trigger_manual_remote_bell,
+                target=function,
                 args=(remote, event_fields, index),
                 name=f'school-bell-manual-remote-{index}',
                 daemon=True,
             ).start()
 
-    def _trigger_manual_remote_bell(
+    def _trigger_manual_remote_ssh(
         self, remote: dict, event_fields: dict, index: int,
     ) -> None:
         """Execute and log one best-effort manual SSH action."""
@@ -1099,7 +1213,7 @@ class SchoolBell(object):
         )
         fields = {
             **event_fields,
-            'transport': 'ssh',
+            'transport': remote['transport'],
             'remote_index': index,
             'remote_host': remote['host'],
         }
@@ -1115,6 +1229,52 @@ class SchoolBell(object):
             success = False
             self.log.error(
                 'Manual remote bell %s failed: %s', remote['host'], err
+            )
+        fields['duration_seconds'] = round(monotonic() - started, 3)
+        if success:
+            log_event(self.log, 'manual_remote_trigger', **fields)
+        else:
+            log_event(
+                self.log,
+                'manual_remote_trigger',
+                status='failure',
+                level=40,
+                error_category='manual_remote_trigger_error',
+                **fields,
+            )
+
+    def _trigger_manual_remote_webhook(
+        self, remote: dict, event_fields: dict, index: int,
+    ) -> None:
+        """Call and log one best-effort remote bell webhook."""
+        started = monotonic()
+        headers = dict(remote['headers'])
+        auth = None
+        if remote['auth'] and remote['auth']['type'] == 'bearer':
+            headers['Authorization'] = f"Bearer {remote['auth']['token']}"
+        elif remote['auth']:
+            auth = (
+                remote['auth']['username'], remote['auth']['password']
+            )
+        fields = {
+            **event_fields,
+            'transport': 'webhook',
+            'remote_index': index,
+        }
+        try:
+            response = requests.post(
+                remote['url'],
+                json={'wav_key': event_fields['wav_key']},
+                headers=headers,
+                auth=auth,
+                timeout=remote['timeout'],
+            )
+            response.raise_for_status()
+            success = True
+        except Exception as err:
+            success = False
+            self.log.error(
+                'Manual remote webhook failed: %s', type(err).__name__
             )
         fields['duration_seconds'] = round(monotonic() - started, 3)
         if success:

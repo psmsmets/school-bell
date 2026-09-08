@@ -1,6 +1,7 @@
 """GPIO input adapter for a single physical manual bell button."""
 
 from threading import Event, Lock, Thread
+from urllib.parse import urlsplit
 
 from gpiozero import Button
 
@@ -69,7 +70,7 @@ class ManualBellInput:
 
     @staticmethod
     def _validate_remote_bells(remote_bells):
-        """Validate best-effort SSH actions associated with this button."""
+        """Validate best-effort remote actions associated with this button."""
         if not isinstance(remote_bells, list):
             raise TypeError('manual_bell.remote_bells should be a list!')
 
@@ -85,6 +86,15 @@ class ManualBellInput:
         prefix = f'manual_bell.remote_bells[{index}]'
         if not isinstance(remote, dict):
             raise TypeError(f'{prefix} should be a dictionary!')
+        transport = str(remote.get('transport', 'ssh')).lower()
+        if transport == 'webhook':
+            return ManualBellInput._validate_remote_webhook(remote, prefix)
+        if transport != 'ssh':
+            raise ValueError(f'{prefix}.transport should be ssh or webhook!')
+        return ManualBellInput._validate_remote_ssh(remote, prefix)
+
+    @staticmethod
+    def _validate_remote_ssh(remote, prefix):
         host = remote.get('host')
         if not isinstance(host, str) or not host.strip():
             raise ValueError(f'{prefix}.host should be a non-empty string!')
@@ -102,11 +112,61 @@ class ManualBellInput:
         if timeout <= 0:
             raise ValueError(f'{prefix}.timeout should be positive!')
         return {
+            'transport': 'ssh',
             'host': host.strip(),
             'user': user.strip() if user is not None else None,
             'command': command,
             'timeout': timeout,
         }
+
+    @staticmethod
+    def _validate_remote_webhook(remote, prefix):
+        url = remote.get('url')
+        if not isinstance(url, str) or urlsplit(url).scheme not in (
+            'http', 'https'
+        ) or not urlsplit(url).netloc:
+            raise ValueError(f'{prefix}.url should be an HTTP(S) URL!')
+        headers = remote.get('headers', {})
+        if not isinstance(headers, dict) or any(
+            not isinstance(key, str) or not isinstance(value, str)
+            for key, value in headers.items()
+        ):
+            raise TypeError(f'{prefix}.headers should map strings to strings!')
+        auth = ManualBellInput._validate_webhook_auth(
+            remote.get('auth'), prefix
+        )
+        timeout = remote.get('timeout', 5)
+        if not isinstance(timeout, (int, float)) or isinstance(timeout, bool):
+            raise TypeError(f'{prefix}.timeout should be a number!')
+        if timeout <= 0:
+            raise ValueError(f'{prefix}.timeout should be positive!')
+        return {
+            'transport': 'webhook',
+            'url': url,
+            'headers': dict(headers),
+            'auth': auth,
+            'timeout': timeout,
+        }
+
+    @staticmethod
+    def _validate_webhook_auth(auth, prefix):
+        if auth is None:
+            return None
+        if not isinstance(auth, dict):
+            raise TypeError(f'{prefix}.auth should be a dictionary!')
+        auth_type = str(auth.get('type', '')).lower()
+        required = {
+            'bearer': ('token',),
+            'basic': ('username', 'password'),
+        }
+        if auth_type not in required or any(
+            not isinstance(auth.get(key), str) or not auth[key]
+            for key in required.get(auth_type, ())
+        ):
+            raise ValueError(f'{prefix}.auth is invalid!')
+        return {'type': auth_type, **{
+            key: auth[key] for key in required[auth_type]
+        }}
 
     @staticmethod
     def _validate_remote_command(command, prefix):
