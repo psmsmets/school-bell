@@ -10,7 +10,7 @@ name = "school-bell"
 dynamic = ["version"]
 description = "Python scheduled ringing of the school bell"
 readme = { file = "README.rst", content-type = "text/x-rst" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [
     { name = "Pieter Smets", email = "mail@pietersmets.be" },
@@ -25,7 +25,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Unix",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -43,8 +42,7 @@ dependencies = [
     "pytz>=2021.1",
     "icalendar>=6,<8",
     "recurring-ical-events>=3,<4",
-    "pydantic>=2.13,<3; implementation_name != 'pypy' or python_version >= '3.11'",
-    "pydantic>=2.12.5,<2.13; implementation_name == 'pypy' and python_version < '3.11'",
+    "pydantic>=2.13,<3",
 ]
 
 [project.urls]
