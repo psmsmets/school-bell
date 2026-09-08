@@ -29,14 +29,15 @@ schedule locally and operates autonomously.
 Quick start
 -----------
 
-Install School Bell, copy the example configuration and validate it before
+Install School Bell, generate the example configuration and validate it before
 starting the service:
 
 .. code-block:: console
 
    $ python -m pip install .
-   $ cp config.example.json config.json
-   $ school-bell --config config.json --check
+   $ school-bell --demo-config > school-bell.json
+   $ # Edit paths, schedule and optional integrations first.
+   $ school-bell school-bell.json --check
 
 New to the project? Read :doc:`architecture` to understand which components
 run locally and which central services are optional.
@@ -85,6 +86,8 @@ Explore the documentation
 
    installation
    configuration
+   configuration-reference
+   schema
    deployment
 
 .. toctree::

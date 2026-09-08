@@ -5,6 +5,11 @@ School Bell accepts a JSON object directly or a path to a JSON file. The
 configuration is validated completely before the service is initialized.
 Unknown fields are rejected and errors include their full nested path.
 
+This page explains how to build and maintain a configuration. Use the
+:doc:`configuration-reference` when you need the type, default and meaning of
+every available parameter. The :doc:`schema` page describes machine-readable
+validation for editors, CI and deployment tooling.
+
 Minimal configuration
 ---------------------
 
@@ -23,6 +28,23 @@ Minimal configuration
 
 Use ``school-bell --demo-config`` or the repository's ``demo.json`` for a
 complete example.
+
+How the configuration fits together
+------------------------------------
+
+A useful way to read the file is as four layers:
+
+#. ``schedule`` decides **when** a bell should ring and selects a key.
+#. ``wav`` translates that key into a local WAVE filename.
+#. output settings decide **where** it rings: ALSA, GPIO and optional remote
+   bells.
+#. optional integrations suppress bells, accept manual triggers or report
+   health without becoming a dependency for normal local scheduling.
+
+For example, ``"Mon": {"08:30": "lesson"}`` selects the ``lesson`` entry
+from ``wav`` every Monday at 08:30 in the configured timezone. If ``root`` is
+``/home/pi/samples`` and ``wav.lesson`` is ``bell.wav``, School Bell plays
+``/home/pi/samples/bell.wav``.
 
 Core fields
 -----------
@@ -75,6 +97,22 @@ Monitoring
 The optional ``monitoring`` object configures device identity, labels,
 heartbeat events, remote syslog and read-only HTTP status endpoints. See
 :doc:`MONITORING` for examples and security considerations.
+
+Choosing optional integrations
+------------------------------
+
+Start with only ``schedule``, ``wav``, ``root`` and ``timezone``. Add one
+integration at a time and run ``--check`` after every change. A typical order
+is:
+
+#. confirm local WAVE playback;
+#. add GPIO relay outputs if the installation uses them;
+#. add holiday or calendar suppression;
+#. add a physical manual button or authenticated webhook;
+#. add monitoring and verify Graylog or the HTTP health endpoint.
+
+This keeps faults easy to locate and ensures the autonomous local path works
+before central services are introduced.
 
 Validation and normalization
 ----------------------------
