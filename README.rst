@@ -222,7 +222,15 @@ One optional physical push button can trigger a configured WAVE sample:
             "wav_key": "0",
             "mode": "once",
             "pull": "up",
-            "bounce_time": 0.05
+            "bounce_time": 0.05,
+            "remote_bells": [
+                {
+                    "host": "pibell2.local",
+                    "user": "pi",
+                    "command": ["/usr/local/bin/manual-bell"],
+                    "timeout": 5
+                }
+            ]
         }
     }
 
@@ -231,6 +239,14 @@ One optional physical push button can trigger a configured WAVE sample:
 maximum). ``pull`` accepts ``up``, ``down`` or ``floating`` and
 ``bounce_time`` is the debounce interval in seconds. The input GPIO must not
 also be configured as a ``buzz_gpio`` relay output.
+
+``remote_bells`` optionally contains zero or more SSH actions. Each action
+requires a ``host`` and ``command``; ``user`` and ``timeout`` are optional.
+``command`` may be one remote command string or a list of command arguments.
+SSH key authentication must already be configured. Remote actions start in
+the background when the manual signal is accepted. Their success or failure
+is logged as ``manual_remote_trigger`` and never delays or changes the result
+of the local bell.
 
 Manual signals are deliberate local overrides and are therefore not blocked
 by the holiday or disable calendars. Only one bell signal can be active at a

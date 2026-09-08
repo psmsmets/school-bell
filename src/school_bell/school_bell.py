@@ -1005,7 +1005,7 @@ class SchoolBell(object):
         self, key: str, source: str, mode: str = 'once',
         cancel_event: Event = None, respect_calendar: bool = True,
         include_remote: bool = True, event_fields: dict = None,
-        source_gpio: int = None,
+        source_gpio: int = None, manual_remote_bells: list = None,
     ) -> bool:
         """Run one exclusive bell signal from any current or future source."""
         key = str(key)
@@ -1044,6 +1044,9 @@ class SchoolBell(object):
                 key, event_fields
             ):
                 return False
+            self._dispatch_manual_remote_bells(
+                manual_remote_bells or [], source_fields
+            )
             cancelled = self._execute_bell(
                 key, mode, cancel_event, include_remote, event_fields
             )
@@ -1072,6 +1075,59 @@ class SchoolBell(object):
             with self.__state_lock:
                 self.__active_bell = None
             self.__bell_lock.release()
+
+    def _dispatch_manual_remote_bells(
+        self, remote_bells: list, event_fields: dict,
+    ) -> None:
+        """Start configured manual SSH actions without delaying local I/O."""
+        for index, remote in enumerate(remote_bells):
+            Thread(
+                target=self._trigger_manual_remote_bell,
+                args=(remote, event_fields, index),
+                name=f'school-bell-manual-remote-{index}',
+                daemon=True,
+            ).start()
+
+    def _trigger_manual_remote_bell(
+        self, remote: dict, event_fields: dict, index: int,
+    ) -> None:
+        """Execute and log one best-effort manual SSH action."""
+        started = monotonic()
+        target = (
+            f"{remote['user']}@{remote['host']}"
+            if remote.get('user') else remote['host']
+        )
+        fields = {
+            **event_fields,
+            'transport': 'ssh',
+            'remote_index': index,
+            'remote_host': remote['host'],
+        }
+        if remote.get('user'):
+            fields['remote_user'] = remote['user']
+        try:
+            success = system_call(
+                _ssh(target, remote['timeout']) + remote['command'],
+                self.log,
+                timeout=remote['timeout'],
+            )
+        except Exception as err:
+            success = False
+            self.log.error(
+                'Manual remote bell %s failed: %s', remote['host'], err
+            )
+        fields['duration_seconds'] = round(monotonic() - started, 3)
+        if success:
+            log_event(self.log, 'manual_remote_trigger', **fields)
+        else:
+            log_event(
+                self.log,
+                'manual_remote_trigger',
+                status='failure',
+                level=40,
+                error_category='manual_remote_trigger_error',
+                **fields,
+            )
 
     def _execute_bell(
         self, key: str, mode: str, cancel_event: Event,

@@ -233,3 +233,94 @@ def test_input_pin_cannot_be_relay_output():
         ManualBellInput.validate(
             {'gpio': 17, 'wav_key': '0'}, output_pins=[17]
         )
+
+
+def test_manual_remote_bell_configuration_is_validated():
+    config = ManualBellInput.validate({
+        'gpio': 17,
+        'wav_key': '0',
+        'remote_bells': [{
+            'host': 'bell-02.local',
+            'user': 'pi',
+            'command': ['/usr/local/bin/manual-bell', '--now'],
+            'timeout': 4,
+        }],
+    }, output_pins=[])
+
+    assert config['remote_bells'] == [{
+        'host': 'bell-02.local',
+        'user': 'pi',
+        'command': ['/usr/local/bin/manual-bell', '--now'],
+        'timeout': 4,
+    }]
+
+
+@pytest.mark.parametrize('remote_bells,error', [
+    ({}, TypeError),
+    ([{'host': '', 'command': 'ring'}], ValueError),
+    ([{'host': 'bell-02'}], TypeError),
+    ([{'host': 'bell-02', 'command': []}], ValueError),
+    ([{'host': 'bell-02', 'command': 'ring', 'timeout': 0}], ValueError),
+])
+def test_invalid_manual_remote_bell_configuration(remote_bells, error):
+    with pytest.raises(error, match='manual_bell.remote_bells'):
+        ManualBellInput.validate({
+            'gpio': 17, 'wav_key': '0', 'remote_bells': remote_bells,
+        }, output_pins=[])
+
+
+def test_manual_remote_ssh_does_not_block_local_bell(
+    gpio, events, monkeypatch
+):
+    remote_started = Event()
+    release_remote = Event()
+    local_completed = Event()
+    remote_finished = Event()
+    commands = []
+
+    def remote_call(command, _logger, **kwargs):
+        commands.append((command, kwargs))
+        remote_started.set()
+        assert release_remote.wait(1)
+        remote_finished.set()
+        return False
+
+    monkeypatch.setattr(bell_module, 'system_call', remote_call)
+    monkeypatch.setattr(
+        bell_module, '_play', lambda *_args: local_completed.set() or True
+    )
+    obj = bell(manual_bell={
+        'gpio': 17,
+        'wav_key': '0',
+        'remote_bells': [{
+            'host': 'bell-02.local',
+            'user': 'pi',
+            'command': '/usr/local/bin/manual-bell',
+            'timeout': 3,
+        }],
+    })
+
+    FakeButton.instances[0].press()
+    assert remote_started.wait(1)
+    assert local_completed.wait(1)
+    assert not remote_finished.is_set()
+    release_remote.set()
+    assert remote_finished.wait(1)
+    obj.close()
+
+    assert commands == [([
+        '/usr/bin/ssh', '-t', '-o', 'ConnectTimeout=3',
+        '-o', 'StrictHostKeyChecking=no', 'pi@bell-02.local',
+        '/usr/local/bin/manual-bell',
+    ], {'timeout': 3})]
+    failure = next(
+        event for event in events
+        if event['event'] == 'manual_remote_trigger'
+    )
+    assert failure['status'] == 'failure'
+    assert failure['transport'] == 'ssh'
+    assert failure['remote_host'] == 'bell-02.local'
+    assert failure['remote_user'] == 'pi'
+    assert any(
+        event['event'] == 'manual_bell_completed' for event in events
+    )
