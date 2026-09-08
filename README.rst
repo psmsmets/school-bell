@@ -1,12 +1,15 @@
 School Bell
 ===========
 
-|Maintenance yes| |MIT license| |made-with-python| |Workflow status|
+|Maintenance yes| |MIT license| |made-with-python| |Workflow status| |Documentation status|
 
 .. |Maintenance yes| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
 .. |MIT license| image:: https://img.shields.io/badge/License-MIT-blue.svg
 .. |made-with-python| image:: https://img.shields.io/badge/Made%20with-Python-1f425f.svg
 .. |Workflow status| image:: https://github.com/psmsmets/school-bell/actions/workflows/tests.yml/badge.svg
+.. |Documentation status| image:: https://readthedocs.org/projects/school-bell/badge/?version=latest
+   :target: https://school-bell.readthedocs.io/en/latest/
+   :alt: Documentation status
 
 School Bell schedules WAVE audio and optional GPIO relay outputs on Linux
 devices such as Raspberry Pis. Each bell stores its configuration, schedule and
@@ -85,11 +88,12 @@ Use ``school-bell --demo-config`` for a complete example and
 Documentation
 -------------
 
-The complete documentation is in `docs/index.rst`_ and covers architecture,
-installation, configuration, deployment, networking, monitoring, audio and
-troubleshooting. It can be built locally with Sphinx and does not depend on a
-hosted documentation service.
+Read the `online documentation`_ for architecture, installation,
+configuration, deployment, networking, monitoring, audio and troubleshooting.
+The sources remain available in `docs/index.rst`_ and can be built locally with
+Sphinx without depending on the hosted documentation service.
 
+.. _online documentation: https://school-bell.readthedocs.io/en/latest/
 .. _docs/index.rst: docs/index.rst
 
 Development
