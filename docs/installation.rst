@@ -13,6 +13,23 @@ also needs:
 * network access during installation;
 * online or local NTP for reliable clock synchronization.
 
+Reference hardware
+------------------
+
+The reference platform for School Bell 1.0 is a Raspberry Pi 3B+ with 1 GB of
+memory running the 64-bit edition of Raspberry Pi OS Lite. This is the
+recommended setup for new installations. The Lite edition is sufficient for a
+bell node; a desktop environment is not needed for normal operation. More
+powerful hardware is generally unnecessary, so a modest model keeps hardware
+and energy costs down.
+
+School Bell is lightweight and is also known to run on older Raspberry Pi
+models with 512 MB of memory. Other models are expected to work when they
+provide Python 3.11 or newer, ALSA and the required GPIO interfaces, but they
+are not part of a formal compatibility matrix. Raspberry Pi Zero models still
+require more extensive testing and should therefore be treated as unverified
+for production deployments.
+
 Manual installation
 -------------------
 
