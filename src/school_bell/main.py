@@ -18,6 +18,7 @@ except (ValueError, ModuleNotFoundError, SyntaxError):
 from .utils import init_logger, system_call
 from .school_bell import SchoolBell
 from .identifiers import content_hash
+from .config import validate_config
 from .monitoring import configure_remote_syslog
 from .disable_calendar import DisableCalendar
 from .openholidays import OpenHolidays
@@ -194,19 +195,6 @@ def _load_config(value):
         )
 
 
-def _validate_config(config):
-    """Validate the top-level configuration required by the entrypoint."""
-    if not isinstance(config, dict):
-        raise TypeError('JSON config should be a dictionary!')
-    for key in ('schedule', 'wav'):
-        if key not in config:
-            raise KeyError(
-                f"JSON config should contain the dictionary '{key}'!"
-            )
-        if not isinstance(config[key], dict):
-            raise TypeError(f"JSON config '{key}' should be a dictionary!")
-
-
 def _initialize_service(args, logger, prog, info):
     """Parse, validate and initialize behind one startup error boundary."""
     config = None
@@ -222,21 +210,30 @@ def _initialize_service(args, logger, prog, info):
             _warn_monitoring_unavailable(logger, monitoring_error, config)
 
         phase = 'configuration_validation'
-        _validate_config(config)
+        # Hash the supplied JSON before validation can apply defaults or
+        # normalization. Runtime-only values never enter the config model.
+        config_hash = content_hash(config)
+        schedule_source = (
+            config.get('schedule') if isinstance(config, dict) else None
+        )
+        schedule_hash = content_hash(schedule_source)
+        validated = validate_config(config)
+        runtime_config = validated.model_dump(exclude_none=True)
 
-        # Hash supplied JSON before adding command-line/runtime-only values.
-        config['config_hash'] = content_hash(config)
-        config['schedule_hash'] = content_hash(config['schedule'])
+        runtime_config['config_hash'] = config_hash
+        runtime_config['schedule_hash'] = schedule_hash
         # --check always remains non-operational, even if combined with
         # hardware-oriented command-line flags.
-        config['test'] = args.test and not args.check
-        config['check'] = args.check
-        config['debug'] = args.debug
-        config['prog'] = f'{prog}.check-internal' if args.check else prog
-        config['info'] = info
+        runtime_config['test'] = args.test and not args.check
+        runtime_config['check'] = args.check
+        runtime_config['debug'] = args.debug
+        runtime_config['prog'] = (
+            f'{prog}.check-internal' if args.check else prog
+        )
+        runtime_config['info'] = info
 
         phase = 'service_initialization'
-        return SchoolBell(**config)
+        return SchoolBell(**runtime_config)
     except Exception as error:
         _report_startup_failure(logger, error, phase, config)
         raise
