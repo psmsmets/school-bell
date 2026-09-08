@@ -19,7 +19,15 @@
         "wav_key": "0",
         "mode": "once",
         "pull": "up",
-        "bounce_time": 0.05
+        "bounce_time": 0.05,
+        "remote_bells": [
+            {
+                "host": "pibell2.local",
+                "user": "pi",
+                "command": ["/usr/local/bin/manual-bell"],
+                "timeout": 5
+            }
+        ]
     },
     "holidays": "BE-NL",
     "disable_calendar": "https://example.com/public-calendar.ics",
