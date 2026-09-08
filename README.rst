@@ -229,6 +229,15 @@ One optional physical push button can trigger a configured WAVE sample:
                     "user": "pi",
                     "command": ["/usr/local/bin/manual-bell"],
                     "timeout": 5
+                },
+                {
+                    "transport": "webhook",
+                    "url": "https://pibell3.example.com/bell",
+                    "auth": {
+                        "type": "bearer",
+                        "token": "replace-with-remote-token"
+                    },
+                    "timeout": 5
                 }
             ]
         }
@@ -240,13 +249,15 @@ maximum). ``pull`` accepts ``up``, ``down`` or ``floating`` and
 ``bounce_time`` is the debounce interval in seconds. The input GPIO must not
 also be configured as a ``buzz_gpio`` relay output.
 
-``remote_bells`` optionally contains zero or more SSH actions. Each action
-requires a ``host`` and ``command``; ``user`` and ``timeout`` are optional.
-``command`` may be one remote command string or a list of command arguments.
-SSH key authentication must already be configured. Remote actions start in
-the background when the manual signal is accepted. Their success or failure
-is logged as ``manual_remote_trigger`` and never delays or changes the result
-of the local bell.
+``remote_bells`` optionally contains zero or more SSH or webhook actions. SSH
+is the default transport and requires ``host`` and ``command``; ``user`` and
+``timeout`` are optional. ``command`` may be one remote command string or a
+list of command arguments. SSH key authentication must already be configured.
+A webhook action uses ``transport: webhook`` and requires an HTTP(S) ``url``.
+Optional ``headers`` and bearer or basic ``auth`` can be supplied. Remote
+actions start in the background when the manual signal is accepted. Their
+success or failure is logged as ``manual_remote_trigger`` and never delays or
+changes the result of the local bell.
 
 Manual signals are deliberate local overrides and are therefore not blocked
 by the holiday or disable calendars. Only one bell signal can be active at a
@@ -348,6 +359,43 @@ central syslog or Graylog server and expose optional ``/status`` and ``/health``
 HTTP endpoints. See the `monitoring guide`_.
 
 .. _monitoring guide: monitoring/README.md
+
+Bell webhook
+------------
+
+An authenticated HTTP endpoint can expose the existing bell coordinator:
+
+.. code-block:: JSON
+
+    "webhook": {
+        "enabled": true,
+        "host": "127.0.0.1",
+        "port": 8081,
+        "token": "replace-with-a-long-random-token",
+        "rate_limit": 10,
+        "rate_window": 60
+    }
+
+Send only a configured ``wav_key`` to ``POST /bell``:
+
+.. code-block:: sh
+
+    curl -X POST https://bell.example.com/bell \
+      -H 'Authorization: Bearer replace-with-a-long-random-token' \
+      -H 'Content-Type: application/json' \
+      --data '{"wav_key":"0"}'
+
+The endpoint returns ``202`` after a successful signal, ``409`` when another
+signal is active, ``400`` for invalid input, ``401`` for failed authentication,
+``429`` when the per-client rate limit is exceeded, and ``503`` when playback
+fails. Responses contain keys and status information only, never sample paths.
+
+The built-in server is plain HTTP. Keep it bound to ``127.0.0.1`` and publish
+it only through a TLS reverse proxy such as nginx, Caddy or Apache. Configure
+TLS certificate validation, request-size limits and trusted-network access on
+that proxy. Never expose the built-in port directly to an untrusted network,
+and store a long random bearer token with permissions limited to the service
+account.
 
 
 Systemd service

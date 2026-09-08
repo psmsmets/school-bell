@@ -26,8 +26,25 @@
                 "user": "pi",
                 "command": ["/usr/local/bin/manual-bell"],
                 "timeout": 5
+            },
+            {
+                "transport": "webhook",
+                "url": "https://pibell3.example.com/bell",
+                "auth": {
+                    "type": "bearer",
+                    "token": "replace-with-remote-token"
+                },
+                "timeout": 5
             }
         ]
+    },
+    "webhook": {
+        "enabled": false,
+        "host": "127.0.0.1",
+        "port": 8081,
+        "token": "replace-with-a-long-random-token",
+        "rate_limit": 10,
+        "rate_window": 60
     },
     "holidays": "BE-NL",
     "disable_calendar": "https://example.com/public-calendar.ics",
