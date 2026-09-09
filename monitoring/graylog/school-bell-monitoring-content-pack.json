@@ -1,7 +1,7 @@
 {
   "v": 1,
   "id": "67aa20cd-0e96-4ea9-b02e-52aeb93a4e91",
-  "rev": 1,
+  "rev": 2,
   "name": "School Bell Monitoring",
   "summary": "Reusable monitoring for School Bell events received by any compatible RFC 5424 Syslog input.",
   "description": "Installs a School Bell stream, exact application_name routing rule, JSON parsing pipeline, monitoring dashboard, and duplicate-execution and planned-failure event definitions. Requires an existing RFC 5424 UDP or TCP Syslog input.",
@@ -271,8 +271,8 @@
                         "timestamp"
                       ],
                       "interval": {
-                        "type": "auto",
-                        "scaling": 1
+                        "type": "timeunit",
+                        "timeunit": "15m"
                       }
                     }
                   ],
@@ -423,8 +423,8 @@
                         "timestamp"
                       ],
                       "interval": {
-                        "type": "auto",
-                        "scaling": 1
+                        "type": "timeunit",
+                        "timeunit": "15m"
                       }
                     }
                   ],
@@ -1091,8 +1091,8 @@
                       "type": "time",
                       "config": {
                         "interval": {
-                          "type": "auto",
-                          "scaling": 1
+                          "type": "timeunit",
+                          "timeunit": "15m"
                         }
                       }
                     }
@@ -1201,8 +1201,8 @@
                       "type": "time",
                       "config": {
                         "interval": {
-                          "type": "auto",
-                          "scaling": 1
+                          "type": "timeunit",
+                          "timeunit": "15m"
                         }
                       }
                     }
