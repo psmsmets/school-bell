@@ -108,4 +108,6 @@ configured School Bell should appear in Graylog within five minutes.
 
 The content pack installs the **School Bell Overview** dashboard and its event
 definitions. See [`DASHBOARD.md`](DASHBOARD.md) for the complete widget and
-query reference when building or customizing a dashboard manually.
+query reference when building or customizing a dashboard manually. The weekly
+ring charts use `Europe/Brussels` for their keyword time ranges so their week
+boundaries and graph buckets follow local time rather than UTC.

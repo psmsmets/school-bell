@@ -36,6 +36,28 @@ version tables. Put the ring chart across the full dashboard width. The failure
 and recent-event tables belong at the bottom because they are primarily used
 for investigation.
 
+## Timezone of the weekly charts
+
+The content pack sets **Successful rings (this week)** and **Successful rings
+(last week)** to `Europe/Brussels`. This makes both the week boundaries and the
+time buckets follow Belgian local time, including daylight-saving changes.
+School Bell and Graylog should continue storing event timestamps in UTC.
+
+To correct an already imported dashboard in the Graylog GUI:
+
+1. Open **Dashboards → School Bell Overview**.
+2. Click the pencil icon on **Successful rings (this week)**.
+3. Open the widget-specific time range using the clock icon.
+4. Select **Keyword**, enter `This week`, and select
+   `Europe/Brussels` as timezone.
+5. Apply the time range and click **Update widget**.
+6. Repeat for **Successful rings (last week)** with the keyword `Last week`.
+
+The exact label or placement of the clock control can vary slightly by Graylog
+version. Changing the timezone in the user profile only affects displayed
+message timestamps; it does not replace a timezone explicitly saved in a
+widget's keyword time range.
+
 ## Filters and alerts
 
 Useful temporary filters in the dashboard search bar are:

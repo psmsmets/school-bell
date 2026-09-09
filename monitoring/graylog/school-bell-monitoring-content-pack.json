@@ -247,7 +247,7 @@
                   "name": "chart",
                   "timerange": {
                     "keyword": "This week",
-                    "timezone": "UTC",
+                    "timezone": "Europe/Brussels",
                     "type": "keyword"
                   },
                   "column_limit": null,
@@ -399,7 +399,7 @@
                   "name": "chart",
                   "timerange": {
                     "keyword": "Last week",
-                    "timezone": "UTC",
+                    "timezone": "Europe/Brussels",
                     "type": "keyword"
                   },
                   "column_limit": null,
@@ -1133,7 +1133,7 @@
                 "context": null,
                 "timerange": {
                   "keyword": "Last week",
-                  "timezone": "UTC",
+                  "timezone": "Europe/Brussels",
                   "type": "keyword"
                 },
                 "streams": [
@@ -1243,7 +1243,7 @@
                 "context": null,
                 "timerange": {
                   "keyword": "This week",
-                  "timezone": "UTC",
+                  "timezone": "Europe/Brussels",
                   "type": "keyword"
                 },
                 "streams": [
