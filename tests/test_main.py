@@ -3,6 +3,7 @@ import logging
 import sys
 
 import pytest
+from pydantic import ValidationError
 
 import school_bell.main as main_module
 import school_bell.openholidays as openholidays_module
@@ -77,14 +78,14 @@ def test_configuration_validation_failure_is_reported_centrally(monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['school-bell', json.dumps(supplied)])
 
     try:
-        with pytest.raises(KeyError, match="'wav'"):
+        with pytest.raises(ValidationError, match='wav'):
             main_module.main()
     finally:
         logging.getLogger('school-bell').removeHandler(handler)
 
     event = next(r for r in records if r.event == 'startup_failed')
     assert event.status == 'failure'
-    assert event.fields['exception_type'] == 'KeyError'
+    assert event.fields['exception_type'] == 'ValidationError'
     assert event.fields['startup_phase'] == 'configuration_validation'
     assert event.fields['error_message']
 
@@ -135,7 +136,7 @@ def test_startup_event_redacts_sensitive_configuration(monkeypatch):
             'schedule': {},
             'wav': {},
             'monitoring': {
-                'token': secret,
+                'status': {'token': secret},
                 'syslog': {'host': 'graylog.example.com'},
             },
         })],
@@ -172,7 +173,7 @@ def test_logging_failure_does_not_replace_startup_exception(monkeypatch):
     )
 
     try:
-        with pytest.raises(KeyError, match="'wav'"):
+        with pytest.raises(ValidationError, match='wav'):
             main_module.main()
     finally:
         logging.getLogger('school-bell').removeHandler(handler)
