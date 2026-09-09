@@ -56,6 +56,10 @@ Create a file named ``inventory`` on the controller:
    pibell-main ansible_host=192.168.10.41 ansible_user=pi
    pibell-yard ansible_host=192.168.10.42 ansible_user=pi
 
+   [school_bells:vars]
+   ansible_ssh_private_key_file=~/.ssh/id_MIRHO
+   ansible_ssh_common_args='-o PreferredAuthentications=publickey'
+
 Test both SSH and privilege escalation before changing anything:
 
 .. code-block:: console
@@ -123,7 +127,16 @@ Use ``update.yml`` to install another application revision:
 .. code-block:: console
 
    ansible-playbook -i inventory ansible/update.yml \
-     --limit pibell-main \
+     --limit pibell-yard \
+     -e school_bell_version=YOUR_TESTED_TAG_OR_COMMIT
+
+If ``pibell-yard`` is configured as a host in ``~/.ssh/config``, it can also be
+updated without an inventory file. The trailing comma makes it an inline host
+list:
+
+.. code-block:: console
+
+   ansible-playbook -i pibell-yard, ansible/update.yml \
      -e school_bell_version=YOUR_TESTED_TAG_OR_COMMIT
 
 The playbook records the SHA-256 checksum of ``schema.json`` before updating

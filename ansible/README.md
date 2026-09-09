@@ -4,6 +4,18 @@ These playbooks replace the examples in `docs/playbooks` without modifying
 those original files. They target inventory hosts supplied on the command line;
 use inventory groups instead of editing `hosts:` in a playbook.
 
+Create a local `inventory` file:
+
+```ini
+[school_bells]
+pibell-main ansible_host=192.168.10.41 ansible_user=pi
+pibell-yard ansible_host=192.168.10.42 ansible_user=pi
+
+[school_bells:vars]
+ansible_ssh_private_key_file=~/.ssh/id_MIRHO
+ansible_ssh_common_args='-o PreferredAuthentications=publickey'
+```
+
 ## Schema safety
 
 The playbooks treat the device's `schema.json` as persistent, device-specific
@@ -190,7 +202,15 @@ virtual environment. It does not upload a demo or controller-side schema:
 
 ```sh
 ansible-playbook -i inventory ansible/update.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-yard \
+  -e school_bell_version=my-feature-branch
+```
+
+If `pibell-yard` is configured as a host in `~/.ssh/config`, update it without
+an inventory file by using an inline host list. Keep the trailing comma:
+
+```sh
+ansible-playbook -i pibell-yard, ansible/update.yml \
   -e school_bell_version=my-feature-branch
 ```
 
