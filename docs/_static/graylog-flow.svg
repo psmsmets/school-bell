@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="390" viewBox="0 0 1100 390" role="img" aria-labelledby="title desc">
+  <title id="title">School Bell event flow through Graylog</title>
+  <desc id="desc">Two autonomous bell nodes send structured syslog events to a shared Graylog input, stream and pipeline. The processed events feed search, a dashboard and alerts.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .heading { font: 700 21px system-ui, sans-serif; fill: #172033; }
+      .label { font: 600 16px system-ui, sans-serif; fill: #172033; }
+      .small { font: 14px system-ui, sans-serif; fill: #334155; }
+      .node { fill: #ecfdf5; stroke: #10b981; stroke-width: 2.5; }
+      .graylog { fill: #eff6ff; stroke: #3b82f6; stroke-width: 2.5; }
+      .result { fill: #f5f3ff; stroke: #8b5cf6; stroke-width: 2.5; }
+      .line { stroke: #2563eb; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1100" height="390" rx="20" fill="#ffffff"/>
+  <text x="52" y="42" class="heading">Autonomous nodes</text>
+  <text x="430" y="42" class="heading">Shared Graylog processing</text>
+  <text x="872" y="42" class="heading">Operator views</text>
+
+  <rect x="45" y="76" width="220" height="82" rx="14" class="node"/>
+  <text x="155" y="108" text-anchor="middle" class="label">Bell node 1</text>
+  <text x="155" y="134" text-anchor="middle" class="small">device_id and labels</text>
+  <rect x="45" y="210" width="220" height="82" rx="14" class="node"/>
+  <text x="155" y="242" text-anchor="middle" class="label">Bell node 2</text>
+  <text x="155" y="268" text-anchor="middle" class="small">device_id and labels</text>
+
+  <rect x="365" y="124" width="170" height="120" rx="14" class="graylog"/>
+  <text x="450" y="164" text-anchor="middle" class="label">Syslog input</text>
+  <text x="450" y="190" text-anchor="middle" class="small">RFC 5424</text>
+  <text x="450" y="214" text-anchor="middle" class="small">UDP or TCP</text>
+  <rect x="610" y="124" width="190" height="120" rx="14" class="graylog"/>
+  <text x="705" y="164" text-anchor="middle" class="label">Stream + pipeline</text>
+  <text x="705" y="190" text-anchor="middle" class="small">select messages</text>
+  <text x="705" y="214" text-anchor="middle" class="small">extract sb_* fields</text>
+
+  <rect x="880" y="68" width="170" height="64" rx="12" class="result"/>
+  <text x="965" y="107" text-anchor="middle" class="label">Search</text>
+  <rect x="880" y="152" width="170" height="64" rx="12" class="result"/>
+  <text x="965" y="191" text-anchor="middle" class="label">Dashboard</text>
+  <rect x="880" y="236" width="170" height="64" rx="12" class="result"/>
+  <text x="965" y="275" text-anchor="middle" class="label">Alerts</text>
+
+  <path d="M265 117 H320 V166 H365" class="line"/>
+  <path d="M265 251 H320 V202 H365" class="line"/>
+  <path d="M535 184 H610" class="line"/>
+  <path d="M800 184 H840 V100 H880" class="line"/>
+  <path d="M800 184 H880" class="line"/>
+  <path d="M800 184 H840 V268 H880" class="line"/>
+  <text x="532" y="348" text-anchor="middle" class="small">Graylog can be unavailable without stopping local schedules; events may be lost during the outage.</text>
+</svg>

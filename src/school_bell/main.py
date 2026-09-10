@@ -313,12 +313,6 @@ def main():
     # arguments
     parser = argparse.ArgumentParser(prog=prog, description=info)
     parser.add_argument(
-        '-b', '--buzz', metavar='..', type=int, nargs='?',
-        default=False, const=17,
-        help=('Buzz via RPi GPIO while the WAV audio file plays '
-              '(default: %(default)s)')
-    )
-    parser.add_argument(
         '-p', '--play', metavar='..', type=str, nargs='?',
         default=False,
         help=('Play a WAV audio file by specifying the key from '

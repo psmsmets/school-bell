@@ -45,6 +45,16 @@ dependencies = [
     "pydantic>=2.13,<3",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=8,<10",
+    "furo>=2024.8.6",
+    "sphinx-design>=0.6,<1",
+]
+test = [
+    "pytest>=8",
+]
+
 [project.urls]
 Homepage = "https://github.com/psmsmets/school-bell"
 Source = "https://github.com/psmsmets/school-bell"
