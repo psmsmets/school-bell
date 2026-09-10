@@ -50,7 +50,8 @@ GPIO does not switch
 
 Check BCM pin numbering, relay polarity, power and service-user permissions.
 Active-low relay boards require ``"buzz_active_high": false``. Never diagnose
-relay wiring with a live high-voltage or bell circuit attached.
+relay wiring with a live high-voltage or bell circuit attached. The pin-number
+explanation, Waveshare mapping and safe test sequence are in :doc:`GPIO`.
 
 Bells ring at the wrong time
 ----------------------------

@@ -112,7 +112,7 @@ Top-level fields
 ``buzz_gpio`` (integer, array of integers, or null; default ``null``)
    One BCM GPIO number or multiple output pins. Outputs are activated while
    the WAVE file plays. The physical manual-button pin cannot reuse one of
-   these outputs.
+   these outputs. See :doc:`GPIO` for pin numbering and relay wiring.
 
 ``buzz_active_high`` (boolean, default ``true``)
    ``true`` drives the configured outputs high while ringing; ``false`` is for
@@ -157,7 +157,7 @@ Physical manual bell
 
 ``manual_bell.gpio`` (integer, required)
    BCM GPIO input connected to the button. It must differ from every
-   ``buzz_gpio`` output.
+   ``buzz_gpio`` output. See :doc:`GPIO` for a pull-up wiring example.
 
 ``manual_bell.wav_key`` (string, required)
    Entry from ``wav`` to play when the button is pressed.

@@ -160,7 +160,9 @@ scheduled time:
 
 Only after audio works should you test GPIO with ``--test``. That flag plays a
 short part of every configured sound and activates configured outputs, so
-disconnect the real bell circuit until the test behavior is understood.
+disconnect the real bell circuit until the test behavior is understood. See
+:doc:`GPIO` for BCM pin numbering, supported relay polarity, the Waveshare
+board pin mapping, button wiring and a safe commissioning procedure.
 
 Systemd
 -------
@@ -199,6 +201,7 @@ What to do next
 
 * Configure the full schedule using :doc:`configuration`.
 * Configure and test the selected audio output using :doc:`ALSA`.
+* Connect and test relay outputs and a manual button using :doc:`GPIO`.
 * Read :doc:`networking` before placing the node on a restricted network.
 * Use :doc:`deployment` to manage several nodes consistently.
 * Add :doc:`MONITORING` only after local autonomous ringing works.

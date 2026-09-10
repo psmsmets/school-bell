@@ -98,6 +98,7 @@ Explore the documentation
    networking
    MONITORING
    ALSA
+   GPIO
    troubleshooting
 
 .. toctree::

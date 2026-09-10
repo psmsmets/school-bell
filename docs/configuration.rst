@@ -79,12 +79,14 @@ Outputs and triggers
 
 ``device`` selects an ALSA playback device. ``buzz_gpio`` accepts one BCM GPIO
 number or a list. ``buzz_active_high`` defaults to ``true``; set it to
-``false`` for active-low relay boards.
+``false`` for active-low relay boards. See :doc:`GPIO` before selecting pins or
+connecting a relay.
 
 ``manual_bell`` configures one physical input button. Its ``gpio`` cannot also
 be an output, and its ``wav_key`` must exist. ``mode`` is ``once`` or ``hold``;
 ``pull`` is ``up``, ``down`` or ``floating``. Optional ``remote_bells`` entries
-use SSH or authenticated HTTP webhooks.
+use SSH or authenticated HTTP webhooks. :doc:`GPIO` includes the basic button
+wiring and test procedure.
 
 The top-level ``trigger`` mapping configures legacy SSH destinations. The
 ``webhook`` section can expose an authenticated ``POST /bell`` endpoint. Bind
