@@ -11,6 +11,24 @@ import school_bell.disable_calendar as calendar_module
 from school_bell.identifiers import content_hash
 
 
+@pytest.mark.parametrize('argument', [
+    ['--buzz', '17'],
+    ['-b', '17'],
+])
+def test_removed_buzz_argument_is_rejected(monkeypatch, capsys, argument):
+    monkeypatch.setattr(
+        sys, 'argv', ['school-bell', '{}', *argument]
+    )
+
+    with pytest.raises(SystemExit) as error:
+        main_module.main()
+
+    assert error.value.code == 2
+    output = capsys.readouterr().err
+    assert 'unrecognized arguments' in output
+    assert argument[0] in output
+
+
 def test_main_hashes_supplied_json_before_adding_runtime_fields(monkeypatch):
     supplied = {
         'schedule': {'Mon': {'8:30': 0}},

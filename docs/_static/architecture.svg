@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" role="img" aria-labelledby="title desc">
+  <title id="title">Decentralized School Bell architecture</title>
+  <desc id="desc">Optional Ansible, NTP, Graylog and diagnostic services connect to an autonomous bell node. The node contains local configuration, schedule, audio and GPIO resources.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .heading { font: 700 22px system-ui, sans-serif; fill: #172033; }
+      .label { font: 600 17px system-ui, sans-serif; fill: #172033; }
+      .small { font: 15px system-ui, sans-serif; fill: #334155; }
+      .central { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2; }
+      .local { fill: #ecfdf5; stroke: #34d399; stroke-width: 2; }
+      .node { fill: #f8fafc; stroke: #0f766e; stroke-width: 3; }
+      .line { stroke: #2563eb; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .optional { stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+  <rect width="1000" height="540" rx="20" fill="#ffffff"/>
+  <text x="55" y="48" class="heading">Optional central services</text>
+  <text x="590" y="48" class="heading">Autonomous bell node</text>
+
+  <rect x="45" y="82" width="280" height="72" rx="12" class="central"/>
+  <text x="185" y="112" text-anchor="middle" class="label">Ansible controller</text>
+  <text x="185" y="136" text-anchor="middle" class="small">install and deploy</text>
+  <rect x="45" y="178" width="280" height="72" rx="12" class="central"/>
+  <text x="185" y="208" text-anchor="middle" class="label">NTP server</text>
+  <text x="185" y="232" text-anchor="middle" class="small">accurate time</text>
+  <rect x="45" y="274" width="280" height="72" rx="12" class="central"/>
+  <text x="185" y="304" text-anchor="middle" class="label">Graylog</text>
+  <text x="185" y="328" text-anchor="middle" class="small">monitoring and alerts</text>
+  <rect x="45" y="370" width="280" height="72" rx="12" class="central"/>
+  <text x="185" y="400" text-anchor="middle" class="label">Remote administration</text>
+  <text x="185" y="424" text-anchor="middle" class="small">SSH, status and webhooks</text>
+
+  <rect x="540" y="72" width="410" height="406" rx="20" class="node"/>
+  <rect x="580" y="104" width="330" height="62" rx="10" class="local"/>
+  <text x="745" y="132" text-anchor="middle" class="label">Local config.json</text>
+  <text x="745" y="153" text-anchor="middle" class="small">configuration and schedule</text>
+  <rect x="580" y="190" width="330" height="62" rx="10" class="local"/>
+  <text x="745" y="219" text-anchor="middle" class="label">Local scheduler</text>
+  <text x="745" y="240" text-anchor="middle" class="small">timezone-aware execution</text>
+  <rect x="580" y="276" width="155" height="74" rx="10" class="local"/>
+  <text x="657" y="306" text-anchor="middle" class="label">WAVE files</text>
+  <text x="657" y="330" text-anchor="middle" class="small">ALSA output</text>
+  <rect x="755" y="276" width="155" height="74" rx="10" class="local"/>
+  <text x="832" y="306" text-anchor="middle" class="label">GPIO</text>
+  <text x="832" y="330" text-anchor="middle" class="small">relay and button</text>
+  <rect x="580" y="374" width="330" height="62" rx="10" class="local"/>
+  <text x="745" y="403" text-anchor="middle" class="label">System clock</text>
+  <text x="745" y="424" text-anchor="middle" class="small">continues during short outages</text>
+
+  <path d="M325 118 H540" class="line optional"/>
+  <path d="M325 214 H540" class="line optional"/>
+  <path d="M540 310 H325" class="line optional"/>
+  <path d="M325 406 H540" class="line optional"/>
+  <path d="M745 166 V190" class="line"/>
+  <path d="M690 252 V276" class="line"/>
+  <path d="M800 252 V276" class="line"/>
+  <text x="500" y="514" text-anchor="middle" class="small">Dashed connections may be unavailable without stopping the local schedule.</text>
+</svg>

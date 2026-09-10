@@ -4,19 +4,12 @@ Architecture
 School Bell uses a decentralized architecture. Every bell node owns the data
 and resources needed for its normal operation:
 
-.. code-block:: text
+.. figure:: _static/architecture.svg
+   :alt: Optional central services exchange configuration, time, monitoring and triggers with an autonomous bell node that schedules local audio and GPIO.
+   :align: center
 
-   Optional central services                 Autonomous bell node
-
-   Ansible / configuration  ──────────────►  local config.json
-   NTP server               ──────────────►  system clock
-   Graylog / syslog         ◄──────────────  monitoring events
-   diagnostics / triggers   ◄─────────────►  optional HTTP or SSH
-                                               │
-                                               ├── local scheduler
-                                               ├── local WAVE files
-                                               ├── ALSA output
-                                               └── GPIO relays and button
+   Central services support deployment and visibility. The local scheduler,
+   configuration, audio and GPIO remain on every bell node.
 
 Autonomous operation
 --------------------

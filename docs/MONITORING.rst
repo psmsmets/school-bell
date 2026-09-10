@@ -172,6 +172,13 @@ chapter and are intended to be used directly by an administrator.
 How the Graylog flow works
 --------------------------
 
+.. figure:: _static/graylog-flow.svg
+   :alt: Multiple autonomous School Bell nodes send syslog events to a Graylog input, stream and pipeline, which supply search, dashboard and alert views.
+   :align: center
+
+   All nodes can share one input and processing path while retaining their own
+   device identity and labels.
+
 Each Pi sends an RFC 5424 syslog record containing a JSON event. A shared
 Graylog syslog input receives records from every Pi. The supplied stream
 selects only School Bell messages, and the supplied pipeline extracts JSON

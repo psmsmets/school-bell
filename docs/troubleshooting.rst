@@ -81,7 +81,8 @@ Remote trigger fails
 For SSH, test key authentication as the School Bell service user and confirm
 the remote command. For webhooks, verify TLS at the reverse proxy, the bearer
 token, request body and rate limit. A failed remote manual action should not
-delay or change its local bell action.
+delay or change its local bell action. Follow the end-to-end checks in
+:doc:`remote-bells`.
 
 Calendar data is unavailable
 ----------------------------
@@ -89,4 +90,5 @@ Calendar data is unavailable
 Run ``--check`` to test OpenHolidays and iCalendar parsing. Verify DNS, TLS,
 proxy and firewall access. Calendar URLs may contain secrets and are therefore
 redacted from normal errors; test them carefully without publishing them in
-logs or issue reports.
+logs or issue reports. :doc:`calendars` describes refreshes, cached data and
+the fail-open behavior when no valid data is available.

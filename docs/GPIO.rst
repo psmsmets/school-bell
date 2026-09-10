@@ -10,6 +10,14 @@ they must not power a bell, amplifier, relay coil or mains-voltage circuit
 directly. Use a suitable relay interface with electrical isolation and have
 fixed or high-voltage wiring installed by a qualified person.
 
+.. figure:: _static/gpio-wiring.svg
+   :alt: Conceptual GPIO wiring showing a Raspberry Pi controlling an isolated relay input, COM and normally-open contacts in the external bell circuit, and a push button between a GPIO input and ground.
+   :align: center
+
+   Conceptual low-voltage control and relay-contact wiring. Follow the relay
+   manufacturer's instructions and keep the external bell circuit isolated
+   from the Raspberry Pi.
+
 Understanding pin numbers
 -------------------------
 

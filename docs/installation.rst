@@ -202,6 +202,8 @@ What to do next
 * Configure the full schedule using :doc:`configuration`.
 * Configure and test the selected audio output using :doc:`ALSA`.
 * Connect and test relay outputs and a manual button using :doc:`GPIO`.
+* Configure holiday and event exceptions using :doc:`calendars`.
+* Connect bells safely using :doc:`remote-bells` when required.
 * Read :doc:`networking` before placing the node on a restricted network.
 * Use :doc:`deployment` to manage several nodes consistently.
 * Add :doc:`MONITORING` only after local autonomous ringing works.

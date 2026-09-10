@@ -74,6 +74,9 @@ Core fields
 ``disable_calendar``
    Optional HTTP(S) iCalendar URL. Matching events suppress scheduled bells.
 
+See :doc:`calendars` for supported calendar events, refresh behavior and the
+difference between scheduled and manual signals.
+
 Outputs and triggers
 --------------------
 
@@ -91,7 +94,8 @@ wiring and test procedure.
 The top-level ``trigger`` mapping configures legacy SSH destinations. The
 ``webhook`` section can expose an authenticated ``POST /bell`` endpoint. Bind
 the built-in HTTP server to localhost and use a TLS reverse proxy before
-exposing it to an untrusted network.
+exposing it to an untrusted network. Follow :doc:`remote-bells` for SSH-key
+setup, request examples and safe exposure of the endpoint.
 
 Monitoring
 ----------

@@ -18,6 +18,8 @@ Added
 * Optional SSH and webhook actions for manual GPIO bells.
 * Structured Sphinx documentation with architecture, networking, deployment,
   configuration, monitoring, ALSA and troubleshooting guides.
+* Dedicated calendar, remote-bell, command-line and GPIO documentation with
+  accessible architecture, wiring and Graylog flow diagrams.
 
 Changed
 ~~~~~~~
@@ -30,6 +32,12 @@ Changed
   defaults or normalization. Runtime values are not configuration input.
 * CI tests CPython 3.11 through 3.14, PyPy 3.11 and the Sphinx build.
 * The obsolete Mopidy integration guide was removed.
+
+Removed
+~~~~~~~
+
+* Removed the legacy ``-b``/``--buzz`` command-line GPIO override; configure
+  relay outputs with ``buzz_gpio`` and ``buzz_active_high`` in JSON.
 
 0.9.2 — 2026-09-02
 ------------------

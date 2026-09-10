@@ -126,12 +126,14 @@ Top-level fields
 ``holidays`` (string or null, default ``null``)
    OpenHolidays country/language group in ``COUNTRY-LANGUAGE`` form, for
    example ``BE-NL``. A matching public or school holiday suppresses scheduled
-   ringing. It does not block a manual bell.
+   ringing. It does not block a manual bell. See :doc:`calendars` for refresh
+   and outage behavior.
 
 ``trigger`` (object or null, default ``null``)
    Legacy remote playback mapping. Each key is an SSH host and each value is
    the WAVE root on that host. Scheduled bells are also sent to these hosts.
-   Configure key-based SSH access and test it without an interactive prompt.
+   Configure key-based SSH access and test it without an interactive prompt;
+   see :doc:`remote-bells`.
 
 ``timezone`` (string, default ``Europe/Brussels``)
    IANA timezone used for schedule evaluation and monitoring timestamps, such
@@ -140,7 +142,8 @@ Top-level fields
 ``disable_calendar`` (HTTP(S) URL or null, default ``null``)
    iCalendar feed containing periods during which scheduled bells are
    suppressed. Calendar URLs can contain credentials and should be handled as
-   secrets. Manual bells do not respect this suppression.
+   secrets. Manual bells do not respect this suppression. Supported event
+   types and provider instructions are described in :doc:`calendars`.
 
 ``manual_bell`` (object or null, default ``null``)
    Physical GPIO input and the optional remote actions associated with it.
@@ -248,6 +251,9 @@ The request must use ``Content-Type: application/json``, provide
 .. code-block:: json
 
    {"wav_key": "lesson"}
+
+See :doc:`remote-bells` for a complete request, response codes and reverse
+proxy guidance.
 
 Monitoring
 ----------

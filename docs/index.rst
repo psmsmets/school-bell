@@ -72,6 +72,18 @@ Explore the documentation
 
       Diagnose startup, scheduling, connectivity and audio problems.
 
+   .. grid-item-card:: Connect the hardware
+      :link: GPIO
+      :link-type: doc
+
+      Select BCM pins and safely test relays and a manual push button.
+
+   .. grid-item-card:: Add optional controls
+      :link: remote-bells
+      :link-type: doc
+
+      Coordinate bells over SSH or expose an authenticated webhook.
+
 .. toctree::
    :maxdepth: 2
    :caption: Concepts
@@ -87,6 +99,9 @@ Explore the documentation
    installation
    configuration
    configuration-reference
+   calendars
+   remote-bells
+   command-line
    schema
    deployment
 

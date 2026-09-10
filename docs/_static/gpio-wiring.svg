@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="520" viewBox="0 0 1050 520" role="img" aria-labelledby="title desc">
+  <title id="title">Conceptual GPIO, relay and manual-button wiring</title>
+  <desc id="desc">A Raspberry Pi GPIO output controls an isolated relay input. Separate COM and normally-open contacts switch an external bell circuit. A manual input uses a push button to ground.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .heading { font: 700 21px system-ui, sans-serif; fill: #172033; }
+      .label { font: 600 16px system-ui, sans-serif; fill: #172033; }
+      .small { font: 14px system-ui, sans-serif; fill: #334155; }
+      .pi { fill: #eff6ff; stroke: #3b82f6; stroke-width: 2.5; }
+      .relay { fill: #ecfdf5; stroke: #10b981; stroke-width: 2.5; }
+      .external { fill: #fff7ed; stroke: #f97316; stroke-width: 2.5; }
+      .wire { stroke: #2563eb; stroke-width: 3; fill: none; }
+      .contact { stroke: #c2410c; stroke-width: 4; fill: none; }
+      .ground { stroke: #334155; stroke-width: 2.5; fill: none; }
+      .warning { font: 600 14px system-ui, sans-serif; fill: #b91c1c; }
+    </style>
+  </defs>
+  <rect width="1050" height="520" rx="20" fill="#ffffff"/>
+  <text x="55" y="45" class="heading">Raspberry Pi logic side</text>
+  <text x="665" y="45" class="heading">Isolated external bell circuit</text>
+
+  <rect x="45" y="76" width="260" height="350" rx="18" class="pi"/>
+  <text x="175" y="112" text-anchor="middle" class="label">Raspberry Pi</text>
+  <circle cx="270" cy="168" r="8" fill="#2563eb"/>
+  <text x="250" y="162" text-anchor="end" class="label">BCM output</text>
+  <circle cx="270" cy="290" r="8" fill="#2563eb"/>
+  <text x="250" y="284" text-anchor="end" class="label">BCM input</text>
+  <circle cx="270" cy="370" r="8" fill="#334155"/>
+  <text x="250" y="364" text-anchor="end" class="label">GND</text>
+
+  <rect x="390" y="76" width="235" height="185" rx="18" class="relay"/>
+  <text x="507" y="112" text-anchor="middle" class="label">Relay interface</text>
+  <text x="507" y="137" text-anchor="middle" class="small">correctly rated and isolated</text>
+  <circle cx="410" cy="168" r="7" fill="#10b981"/>
+  <text x="430" y="174" class="small">input</text>
+  <path d="M278 168 H403" class="wire" marker-end="url(#arrow)"/>
+  <line x1="507" y1="188" x2="507" y2="235" stroke="#10b981" stroke-width="4"/>
+  <text x="525" y="220" class="small">electrical isolation</text>
+  <path d="M625 168 H680" stroke="#10b981" stroke-width="3" stroke-dasharray="7 5" fill="none"/>
+  <text x="652" y="151" text-anchor="middle" style="font: 11px system-ui, sans-serif; fill: #334155">mechanical</text>
+  <text x="652" y="187" text-anchor="middle" style="font: 11px system-ui, sans-serif; fill: #334155">actuation</text>
+
+  <rect x="680" y="76" width="325" height="260" rx="18" class="external"/>
+  <text x="842" y="112" text-anchor="middle" class="label">Relay contacts</text>
+  <circle cx="725" cy="190" r="7" fill="#c2410c"/>
+  <circle cx="820" cy="190" r="7" fill="#c2410c"/>
+  <text x="725" y="170" text-anchor="middle" class="label">COM</text>
+  <text x="820" y="170" text-anchor="middle" class="label">NO</text>
+  <path d="M725 190 L800 160" class="contact"/>
+  <rect x="690" y="235" width="125" height="54" rx="10" fill="#ffedd5" stroke="#f97316" stroke-width="2"/>
+  <text x="752" y="256" text-anchor="middle" class="small">Existing supply</text>
+  <text x="752" y="276" text-anchor="middle" class="small">or controller</text>
+  <rect x="865" y="235" width="90" height="54" rx="10" fill="#ffedd5" stroke="#f97316" stroke-width="2"/>
+  <text x="910" y="267" text-anchor="middle" class="label">Bell</text>
+  <path d="M725 190 H670 V262 H690 M815 262 H865 M955 262 H980 V190 H820" class="contact"/>
+  <text x="842" y="318" text-anchor="middle" class="small">COM–NO completes the existing circuit while ringing</text>
+
+  <rect x="390" y="298" width="235" height="128" rx="18" fill="#f8fafc" stroke="#64748b" stroke-width="2.5"/>
+  <text x="507" y="327" text-anchor="middle" class="label">Momentary button</text>
+  <circle cx="420" cy="362" r="6" fill="#334155"/>
+  <circle cx="580" cy="362" r="6" fill="#334155"/>
+  <path d="M420 362 H485 M515 362 H580 M485 362 L520 342" class="ground"/>
+  <path d="M278 290 H350 V362 H414" class="wire"/>
+  <path d="M586 362 H650 V370 H278" class="ground"/>
+  <text x="507" y="405" text-anchor="middle" class="small">default pull-up: input to GND</text>
+
+  <line x1="650" y1="65" x2="650" y2="445" stroke="#dc2626" stroke-width="2" stroke-dasharray="8 7"/>
+  <text x="650" y="472" text-anchor="middle" class="warning">No direct electrical connection across this boundary</text>
+  <text x="525" y="500" text-anchor="middle" class="small">Disconnect the external circuit while configuring and testing GPIO.</text>
+</svg>
