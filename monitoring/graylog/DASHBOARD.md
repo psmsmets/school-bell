@@ -69,8 +69,8 @@ keyword range boundaries and display context. They solve separate problems.
 Useful temporary filters in the dashboard search bar are:
 
 ```text
-sb_device_id:vito-bell-01
-sb_label_school:vito
+sb_device_id:main-bell-01
+sb_label_school:example
 sb_label_zone:main
 sb_schedule_hash:a54d...
 sb_schedule_entry_id:4c81...

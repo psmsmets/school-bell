@@ -98,23 +98,35 @@ Explore the documentation
 
    installation
    configuration
-   configuration-reference
+   GPIO
+   ALSA
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Integrations
+   :hidden:
+
    calendars
    remote-bells
-   command-line
-   schema
-   deployment
+   MONITORING
 
 .. toctree::
    :maxdepth: 2
    :caption: Operations
    :hidden:
 
+   deployment
    networking
-   MONITORING
-   ALSA
-   GPIO
    troubleshooting
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
+   :hidden:
+
+   configuration-reference
+   command-line
+   schema
 
 .. toctree::
    :maxdepth: 1

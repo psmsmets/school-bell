@@ -31,7 +31,7 @@ Pi:
 .. code-block:: console
 
    $ ssh-keygen -t ed25519 -C school-bell -f /home/pi/.ssh/id_school_bell
-   $ ssh-copy-id -i /home/pi/.ssh/id_school_bell.pub pi@pibell2.local
+   $ ssh-copy-id -i /home/pi/.ssh/id_school_bell.pub pi@pibell-yard.local
 
 Protect the private key and do not commit it. A service cannot answer a key
 passphrase prompt, so use a deliberately protected service key and restrict
@@ -41,8 +41,8 @@ Create ``/home/pi/.ssh/config`` on the sender:
 
 .. code-block:: text
 
-   Host pibell2
-       HostName pibell2.local
+   Host pibell-yard
+       HostName pibell-yard.local
        User pi
        IdentityFile /home/pi/.ssh/id_school_bell
        IdentitiesOnly yes
@@ -52,7 +52,7 @@ Connect once and verify the host identity before unattended operation:
 
 .. code-block:: console
 
-   $ ssh pibell2 /usr/bin/aplay --help
+   $ ssh pibell-yard /usr/bin/aplay --help
 
 Run this test as the same account used by ``school-bell.service``. It must
 complete without asking for a password, passphrase or host confirmation.
@@ -75,7 +75,7 @@ listed host. Its value is the WAVE directory on that remote host:
 
    {
      "trigger": {
-       "pibell2": "/home/pi/samples"
+       "pibell-yard": "/home/pi/samples"
      }
    }
 
@@ -98,14 +98,14 @@ HTTP(S) webhook when the physical input is accepted:
        "remote_bells": [
          {
            "transport": "ssh",
-           "host": "pibell2.local",
+           "host": "pibell-yard.local",
            "user": "pi",
            "command": ["/usr/local/bin/manual-bell"],
            "timeout": 10
          },
          {
            "transport": "webhook",
-           "url": "https://pibell3.example.com/bell",
+           "url": "https://remote-bell.example.com/bell",
            "auth": {
              "type": "bearer",
              "token": "replace-with-remote-token"

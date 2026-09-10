@@ -16,8 +16,13 @@ are placeholders.
 
    {
        "schedule": {
-           "Mon": {"08:30": "lesson", "12:00": "break"},
-           "Tue": {"08:30": "lesson"}
+           "Mon": {
+               "08:30": "lesson",
+               "12:00": "break"
+           },
+           "Tue": {
+               "08:30": "lesson"
+           }
        },
        "wav": {
            "lesson": "school-bell.wav",
@@ -30,7 +35,7 @@ are placeholders.
        "timeout": 10,
        "holidays": "BE-NL",
        "trigger": {
-           "pibell2.local": "/home/pi/samples"
+           "pibell-yard": "/home/pi/samples"
        },
        "timezone": "Europe/Brussels",
        "disable_calendar": "https://example.com/calendar.ics",
@@ -43,14 +48,14 @@ are placeholders.
            "remote_bells": [
                {
                    "transport": "ssh",
-                   "host": "pibell2.local",
+                   "host": "pibell-yard.local",
                    "user": "pi",
                    "command": ["/usr/local/bin/manual-bell"],
                    "timeout": 10
                },
                {
                    "transport": "webhook",
-                   "url": "https://pibell3.example.com/bell",
+                   "url": "https://remote-bell.example.com/bell",
                    "headers": {"X-Site": "main"},
                    "auth": {
                        "type": "bearer",

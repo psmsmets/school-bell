@@ -21,14 +21,14 @@
         "remote_bells": [
             {
                 "transport": "ssh",
-                "host": "pibell2.local",
+                "host": "pibell-yard.local",
                 "user": "pi",
                 "command": ["/usr/local/bin/manual-bell"],
                 "timeout": 5
             },
             {
                 "transport": "webhook",
-                "url": "https://pibell3.example.com/bell",
+                "url": "https://remote-bell.example.com/bell",
                 "auth": {
                     "type": "bearer",
                     "token": "replace-with-remote-token"

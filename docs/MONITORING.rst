@@ -25,9 +25,9 @@ to group multiple bells by school, site or zone in Graylog.
 
     {
         "monitoring": {
-            "device_id": "vito-bell-01",
+            "device_id": "main-bell-01",
             "labels": {
-                "school": "vito",
+                "school": "example",
                 "zone": "main"
             },
             "heartbeat_interval": 300,
@@ -65,15 +65,15 @@ Every remote record includes stable fields suitable for Graylog indexing:
 
     {
         "application": "school-bell",
-        "hostname": "pibell-vito-01",
-        "device_id": "vito-bell-01",
+        "hostname": "pibell-main",
+        "device_id": "main-bell-01",
         "version": "1.2.3",
         "event": "bell_ring",
         "status": "success",
         "timestamp": "2026-08-28T08:30:00+00:00",
         "level": "info",
         "message": "bell ring",
-        "label_school": "vito",
+        "label_school": "example",
         "label_zone": "main",
         "config_hash": "f72a...",
         "config_hash_short": "f72a93cb815c",
@@ -121,9 +121,9 @@ token whenever the network is not fully trusted.
 .. code-block:: sh
 
     curl -H 'Authorization: Bearer replace-with-a-secret' \
-      http://pibell-vito-01.local:8080/status
+      http://pibell-main.local:8080/status
     curl -H 'Authorization: Bearer replace-with-a-secret' \
-      http://pibell-vito-01.local:8080/health
+      http://pibell-main.local:8080/health
 
 ``/status`` returns the current version, device identity, uptime, schedule,
 trigger hostnames, GPIO pins, last ring, last error and a selected structured

@@ -23,10 +23,10 @@ from school_bell.school_bell import SchoolBell
 def test_structured_syslog_contains_graylog_fields():
     formatter = StructuredSyslogFormatter(
         application='school-bell',
-        hostname='pibell-01',
-        device_id='vito-bell-01',
+        hostname='pibell-main',
+        device_id='main-bell-01',
         version='1.2.3',
-        labels={'school': 'vito', 'zone': 'main'},
+        labels={'school': 'example', 'zone': 'main'},
     )
     record = logging.LogRecord(
         name='school-bell',
@@ -55,14 +55,14 @@ def test_structured_syslog_contains_graylog_fields():
     payload = json.loads(formatted.split(' ', 7)[7])
 
     assert formatted.startswith('1 ')
-    assert ' pibell-01 school-bell - bell_ring - ' in formatted
+    assert ' pibell-main school-bell - bell_ring - ' in formatted
     assert payload['application'] == 'school-bell'
-    assert payload['hostname'] == 'pibell-01'
-    assert payload['device_id'] == 'vito-bell-01'
+    assert payload['hostname'] == 'pibell-main'
+    assert payload['device_id'] == 'main-bell-01'
     assert payload['version'] == '1.2.3'
     assert payload['event'] == 'bell_ring'
     assert payload['status'] == 'success'
-    assert payload['label_school'] == 'vito'
+    assert payload['label_school'] == 'example'
     assert payload['label_zone'] == 'main'
     assert payload['gpio_pins'] == [26, 20]
     assert payload['config_hash'] == 'config-a'
@@ -107,7 +107,7 @@ def test_configure_remote_syslog_protocol(
             'facility': 'daemon',
         },
         version='1.2.3',
-        hostname='pibell-01',
+        hostname='pibell-main',
     )
 
     assert handler is not None
@@ -294,15 +294,15 @@ def test_school_bell_status_supports_multiple_devices():
         wav={},
         root=f'{getcwd()}/samples',
         monitoring={
-            'device_id': 'vito-bell-01',
-            'labels': {'school': 'vito', 'zone': 'main'},
+            'device_id': 'main-bell-01',
+            'labels': {'school': 'example', 'zone': 'main'},
             'status': {'include_systemd': False},
         },
     )
     try:
         payload = bell.monitoring_status()
-        assert payload['device_id'] == 'vito-bell-01'
-        assert payload['labels'] == {'school': 'vito', 'zone': 'main'}
+        assert payload['device_id'] == 'main-bell-01'
+        assert payload['labels'] == {'school': 'example', 'zone': 'main'}
         assert payload['schedule'] == {'Mon': {}}
         assert 'monitoring' not in payload
         assert 'systemd' not in payload

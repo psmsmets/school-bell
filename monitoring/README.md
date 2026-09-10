@@ -15,13 +15,14 @@ Add `monitoring` at the top level of `/home/pi/schema.json`:
 ```json
 {
   "monitoring": {
+    "device_id": "main-bell-01",
     "labels": {
-      "school": "vito",
+      "school": "example",
       "zone": "main"
     },
     "heartbeat_interval": 300,
     "syslog": {
-      "host": "192.168.88.90",
+      "host": "graylog.example.com",
       "port": 1514,
       "protocol": "udp",
       "facility": "daemon"
@@ -62,9 +63,9 @@ Query the HTTP service with:
 
 ```sh
 curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/status
+  http://pibell-main:8080/status
 curl -H 'Authorization: Bearer replace-with-a-secret' \
-  http://pibell-vito-01:8080/health
+  http://pibell-main:8080/health
 ```
 
 `/status` returns the application version, uptime, schedule, GPIO pins, last

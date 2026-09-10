@@ -53,11 +53,11 @@ Create a file named ``inventory`` on the controller:
 .. code-block:: ini
 
    [school_bells]
-   pibell-main ansible_host=192.168.10.41 ansible_user=pi
-   pibell-yard ansible_host=192.168.10.42 ansible_user=pi
+   pibell-main ansible_host=192.0.2.41 ansible_user=pi
+   pibell-yard ansible_host=192.0.2.42 ansible_user=pi
 
    [school_bells:vars]
-   ansible_ssh_private_key_file=~/.ssh/id_MIRHO
+   ansible_ssh_private_key_file=~/.ssh/id_example
    ansible_ssh_common_args='-o PreferredAuthentications=publickey'
 
 Test both SSH and privilege escalation before changing anything:
