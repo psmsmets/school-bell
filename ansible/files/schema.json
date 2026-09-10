@@ -1,11 +1,11 @@
 {
     "timezone": "Europe/Brussels",
     "schedule": {
-        "Mon": {"08:30": 0, "12:00": 0, "15:00": 0},
-        "Tue": {"08:30": 0, "12:00": 0, "15:00": 0},
-        "Wed": {"08:30": 0, "12:00": 0},
-        "Thu": {"08:30": 0, "12:00": 0, "15:00": 0},
-        "Fri": {"08:30": 0, "12:00": 0, "15:00": 0}
+        "Mon": {"08:30": "0", "12:00": "0", "15:00": "0"},
+        "Tue": {"08:30": "0", "12:00": "0", "15:00": "0"},
+        "Wed": {"08:30": "0", "12:00": "0"},
+        "Thu": {"08:30": "0", "12:00": "0", "15:00": "0"},
+        "Fri": {"08:30": "0", "12:00": "0", "15:00": "0"}
     },
     "wav": {
         "0": "SchoolBell-SoundBible.com-449398625.wav",
@@ -22,14 +22,15 @@
         "bounce_time": 0.05,
         "remote_bells": [
             {
-                "host": "pibell2.local",
+                "transport": "ssh",
+                "host": "pibell-yard.local",
                 "user": "pi",
                 "command": ["/usr/local/bin/manual-bell"],
                 "timeout": 5
             },
             {
                 "transport": "webhook",
-                "url": "https://pibell3.example.com/bell",
+                "url": "https://remote-bell.example.com/bell",
                 "auth": {
                     "type": "bearer",
                     "token": "replace-with-remote-token"

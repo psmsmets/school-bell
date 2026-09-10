@@ -54,13 +54,13 @@ sb_application:school-bell
 One device:
 
 ```text
-sb_application:school-bell AND sb_device_id:vito-bell-01
+sb_application:school-bell AND sb_device_id:main-bell-01
 ```
 
 One school:
 
 ```text
-sb_application:school-bell AND sb_label_school:vito
+sb_application:school-bell AND sb_label_school:example
 ```
 
 Configuration and scheduled bell events also expose these separate fields:
@@ -87,9 +87,9 @@ Test two simulated Raspberry Pis:
 
 ```sh
 python3 monitoring/graylog/send-test-event.py graylog.example.com 1514 \
-  --device-id vito-bell-01 --hostname pibell-vito-01
+  --device-id main-bell-01 --hostname pibell-main
 python3 monitoring/graylog/send-test-event.py graylog.example.com 1514 \
-  --device-id aso-bell-01 --hostname pibell-aso-01
+  --device-id yard-bell-01 --hostname pibell-yard
 ```
 
 Add `--protocol tcp` when testing a TCP input.
@@ -108,4 +108,6 @@ configured School Bell should appear in Graylog within five minutes.
 
 The content pack installs the **School Bell Overview** dashboard and its event
 definitions. See [`DASHBOARD.md`](DASHBOARD.md) for the complete widget and
-query reference when building or customizing a dashboard manually.
+query reference when building or customizing a dashboard manually. The weekly
+ring charts use fixed 15-minute buckets instead of an automatic interval and
+use `Europe/Brussels` for their keyword time-range boundaries.

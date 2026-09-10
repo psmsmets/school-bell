@@ -4,6 +4,18 @@ These playbooks replace the examples in `docs/playbooks` without modifying
 those original files. They target inventory hosts supplied on the command line;
 use inventory groups instead of editing `hosts:` in a playbook.
 
+Create a local `inventory` file:
+
+```ini
+[school_bells]
+pibell-main ansible_host=192.0.2.41 ansible_user=pi
+pibell-yard ansible_host=192.0.2.42 ansible_user=pi
+
+[school_bells:vars]
+ansible_ssh_private_key_file=~/.ssh/id_example
+ansible_ssh_common_args='-o PreferredAuthentications=publickey'
+```
+
 ## Schema safety
 
 The playbooks treat the device's `schema.json` as persistent, device-specific
@@ -66,9 +78,9 @@ one install run:
 
 ```sh
 ansible-playbook -i inventory ansible/install.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-main \
   -e school_bell_version=35-preserve-existing-schema \
-  -e school_bell_config_src=/absolute/path/schema-vito.json \
+  -e school_bell_config_src=/absolute/path/schema-main.json \
   -e school_bell_force_reinstall=true
 ```
 
@@ -85,8 +97,8 @@ content changed:
 
 ```sh
 ansible-playbook -i inventory ansible/configure.yml \
-  --limit pibell-vito-01 \
-  -e school_bell_config_src=/absolute/path/schema-vito.json
+  --limit pibell-main \
+  -e school_bell_config_src=/absolute/path/schema-main.json
 ```
 
 Running the configuration playbook is the explicit action that replaces the
@@ -140,7 +152,7 @@ For a predictable timestamp (for example in automation), set it explicitly:
 
 ```sh
 ansible-playbook -i inventory ansible/backup.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-main \
   -e school_bell_backup_timestamp=20260831T120000Z
 ```
 
@@ -159,7 +171,7 @@ before it starts changing any selected bell:
 
 ```sh
 ansible-playbook -i inventory ansible/restore.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-main \
   -e school_bell_backup_timestamp=20260831T120000Z \
   -e school_bell_restore_confirm=true
 ```
@@ -170,7 +182,7 @@ changing the configuration, also set `school_bell_restore_config=false`:
 
 ```sh
 ansible-playbook -i inventory ansible/restore.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-main \
   -e school_bell_backup_timestamp=20260831T120000Z \
   -e school_bell_restore_confirm=true \
   -e school_bell_restore_samples=true \
@@ -190,7 +202,15 @@ virtual environment. It does not upload a demo or controller-side schema:
 
 ```sh
 ansible-playbook -i inventory ansible/update.yml \
-  --limit pibell-vito-01 \
+  --limit pibell-yard \
+  -e school_bell_version=my-feature-branch
+```
+
+If `pibell-yard` is configured as a host in `~/.ssh/config`, update it without
+an inventory file by using an inline host list. Keep the trailing comma:
+
+```sh
+ansible-playbook -i pibell-yard, ansible/update.yml \
   -e school_bell_version=my-feature-branch
 ```
 
@@ -215,7 +235,7 @@ Update or restart selected inventory hosts with `--limit`:
 
 ```sh
 ansible-playbook -i inventory ansible/update.yml --limit school_bells
-ansible-playbook -i inventory ansible/restart.yml --limit pibell-aso-vtilokalen
+ansible-playbook -i inventory ansible/restart.yml --limit pibell-yard
 ```
 
 Variables can be set in inventory/group variables or with `-e`:

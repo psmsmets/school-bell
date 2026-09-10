@@ -3,11 +3,30 @@ import logging
 import sys
 
 import pytest
+from pydantic import ValidationError
 
 import school_bell.main as main_module
 import school_bell.openholidays as openholidays_module
 import school_bell.disable_calendar as calendar_module
 from school_bell.identifiers import content_hash
+
+
+@pytest.mark.parametrize('argument', [
+    ['--buzz', '17'],
+    ['-b', '17'],
+])
+def test_removed_buzz_argument_is_rejected(monkeypatch, capsys, argument):
+    monkeypatch.setattr(
+        sys, 'argv', ['school-bell', '{}', *argument]
+    )
+
+    with pytest.raises(SystemExit) as error:
+        main_module.main()
+
+    assert error.value.code == 2
+    output = capsys.readouterr().err
+    assert 'unrecognized arguments' in output
+    assert argument[0] in output
 
 
 def test_main_hashes_supplied_json_before_adding_runtime_fields(monkeypatch):
@@ -77,14 +96,14 @@ def test_configuration_validation_failure_is_reported_centrally(monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['school-bell', json.dumps(supplied)])
 
     try:
-        with pytest.raises(KeyError, match="'wav'"):
+        with pytest.raises(ValidationError, match='wav'):
             main_module.main()
     finally:
         logging.getLogger('school-bell').removeHandler(handler)
 
     event = next(r for r in records if r.event == 'startup_failed')
     assert event.status == 'failure'
-    assert event.fields['exception_type'] == 'KeyError'
+    assert event.fields['exception_type'] == 'ValidationError'
     assert event.fields['startup_phase'] == 'configuration_validation'
     assert event.fields['error_message']
 
@@ -135,7 +154,7 @@ def test_startup_event_redacts_sensitive_configuration(monkeypatch):
             'schedule': {},
             'wav': {},
             'monitoring': {
-                'token': secret,
+                'status': {'token': secret},
                 'syslog': {'host': 'graylog.example.com'},
             },
         })],
@@ -172,7 +191,7 @@ def test_logging_failure_does_not_replace_startup_exception(monkeypatch):
     )
 
     try:
-        with pytest.raises(KeyError, match="'wav'"):
+        with pytest.raises(ValidationError, match='wav'):
             main_module.main()
     finally:
         logging.getLogger('school-bell').removeHandler(handler)

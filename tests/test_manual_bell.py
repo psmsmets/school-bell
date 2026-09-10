@@ -351,7 +351,7 @@ def test_manual_bell_can_trigger_remote_webhook(
             'transport': 'webhook',
             'url': 'https://bell-02.example/bell',
             'auth': {'type': 'bearer', 'token': 'remote-secret'},
-            'headers': {'X-School': 'VITO'},
+            'headers': {'X-School': 'example'},
             'timeout': 4,
         }],
     })
@@ -363,7 +363,7 @@ def test_manual_bell_can_trigger_remote_webhook(
         'url': 'https://bell-02.example/bell',
         'json': {'wav_key': '0'},
         'headers': {
-            'X-School': 'VITO',
+            'X-School': 'example',
             'Authorization': 'Bearer remote-secret',
         },
         'auth': None,
