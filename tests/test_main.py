@@ -138,6 +138,47 @@ def test_school_bell_initialization_failure_is_reported_and_reraised(
     }
 
 
+def test_test_mode_reports_busy_gpio_without_traceback(monkeypatch, caplog):
+    class BusySchoolBell:
+        def __init__(self, **config):
+            raise RuntimeError("'GPIO busy'")
+
+    monkeypatch.setattr(main_module, 'SchoolBell', BusySchoolBell)
+    monkeypatch.setattr(
+        main_module, '_configure_startup_monitoring', lambda *_: None
+    )
+    monkeypatch.setattr(sys, 'argv', [
+        'school-bell', json.dumps({'schedule': {}, 'wav': {}}), '--test',
+    ])
+
+    assert main_module.main() == 1
+
+    assert 'Cannot run --test' in caplog.text
+    assert 'sudo systemctl stop school-bell' in caplog.text
+    record = next(
+        record for record in caplog.records
+        if getattr(record, 'event', None) == 'startup_failed'
+    )
+    assert record.exc_info is None
+
+
+def test_non_test_gpio_busy_error_is_reraised(monkeypatch):
+    class BusySchoolBell:
+        def __init__(self, **config):
+            raise RuntimeError('GPIO busy')
+
+    monkeypatch.setattr(main_module, 'SchoolBell', BusySchoolBell)
+    monkeypatch.setattr(
+        main_module, '_configure_startup_monitoring', lambda *_: None
+    )
+    monkeypatch.setattr(
+        sys, 'argv', ['school-bell', json.dumps({'schedule': {}, 'wav': {}})]
+    )
+
+    with pytest.raises(RuntimeError, match='GPIO busy'):
+        main_module.main()
+
+
 def test_startup_event_redacts_sensitive_configuration(monkeypatch):
     records, handler = _capture_startup_events(monkeypatch)
     secret = 'do-not-log-this-token'
