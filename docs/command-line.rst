@@ -40,7 +40,9 @@ Diagnostic and one-off actions
    legacy or key-specific relay output sequentially for one second and test
    every configured WAVE file. Disconnect the external bell circuit and use a
    safe audio level first. ``--check`` remains non-destructive when both flags
-   are supplied.
+   are supplied. ``--test`` can run alongside ``school-bell.service`` when
+   they do not claim the same GPIO pins. If a configured pin is already in
+   use, stop the service before retrying the test.
 
 ``--debug``
    Enable verbose local logging. It can reveal hostnames and operational

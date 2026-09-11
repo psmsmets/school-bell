@@ -115,6 +115,43 @@ def _safe_startup_message(error, config=None):
     return (message or 'No error details available')[:500]
 
 
+class _GPIOBusyDuringTest(RuntimeError):
+    """Signal that an operational test cannot claim the configured GPIO."""
+
+
+def _is_gpio_busy(error):
+    """Return whether an exception chain reports an already claimed GPIO."""
+    seen = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        if 'gpio busy' in str(error).lower():
+            return True
+        error = error.__cause__ or error.__context__
+    return False
+
+
+def _report_gpio_busy(logger):
+    """Explain the common service/test GPIO conflict without a traceback."""
+    message = (
+        'Cannot run --test because a configured GPIO pin is already in use. '
+        'If school-bell.service is running, stop it with '
+        '`sudo systemctl stop school-bell` and try again.'
+    )
+    logger.error(
+        message,
+        extra={
+            'event': 'startup_failed',
+            'status': 'failure',
+            'fields': {
+                'exception_type': 'GPIOBusy',
+                'startup_phase': 'service_initialization',
+                'error_message': message,
+            },
+        },
+    )
+    return message
+
+
 def _configure_startup_monitoring(logger, config):
     """Best-effort remote logging setup from a parsed configuration."""
     if not isinstance(config, dict):
@@ -235,6 +272,14 @@ def _initialize_service(args, logger, prog, info):
         phase = 'service_initialization'
         return SchoolBell(**runtime_config)
     except Exception as error:
+        if (
+            phase == 'service_initialization'
+            and args.test
+            and not args.check
+            and _is_gpio_busy(error)
+        ):
+            message = _report_gpio_busy(logger)
+            raise _GPIOBusyDuringTest(message) from None
         _report_startup_failure(logger, error, phase, config)
         raise
 
@@ -365,7 +410,10 @@ def main():
     logger = init_logger(prog, args.debug)
     if args.check:
         return _check_configuration(args, logger, prog, info)
-    obj = _initialize_service(args, logger, prog, info)
+    try:
+        obj = _initialize_service(args, logger, prog, info)
+    except _GPIOBusyDuringTest:
+        return 1
 
     # play a test file or run the schedule
     try:
