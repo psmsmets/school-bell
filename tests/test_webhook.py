@@ -2,7 +2,7 @@ import json
 import urllib.error
 import urllib.request
 from os import getcwd
-from threading import Event, Thread
+from threading import Event
 
 import pytest
 
@@ -98,12 +98,11 @@ def test_webhook_returns_conflict_while_bell_is_active(monkeypatch):
 
     monkeypatch.setattr(bell_module, '_play', play)
     bell = _bell()
-    first_result = []
-    first = Thread(target=lambda: first_result.append(_request(
-        bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
-    )))
     try:
-        first.start()
+        first_status, _, _ = _request(
+            bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
+        )
+        assert first_status == 202
         assert started.wait(1)
         status, payload, _ = _request(
             bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
@@ -112,22 +111,58 @@ def test_webhook_returns_conflict_while_bell_is_active(monkeypatch):
         assert payload == {'error': 'bell active'}
     finally:
         release.set()
-        first.join(2)
         bell.close()
-    assert first_result[0][0] == 202
 
 
-def test_webhook_returns_503_when_playback_fails(monkeypatch):
+def test_webhook_accepts_before_playback_finishes(monkeypatch):
+    started = Event()
+    release = Event()
+
+    def play(*_args):
+        started.set()
+        assert release.wait(2)
+        return True
+
+    monkeypatch.setattr(bell_module, '_play', play)
+    bell = _bell()
+    try:
+        status, payload, _ = _request(
+            bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
+        )
+        assert started.wait(1)
+    finally:
+        release.set()
+        bell.close()
+    assert status == 202
+    assert payload == {'status': 'accepted', 'wav_key': '0'}
+
+
+def test_webhook_reports_playback_failure_as_event(monkeypatch):
+    failed = Event()
+    events = []
+
+    def capture(_logger, event, status='success', level=20, **fields):
+        events.append({'event': event, 'status': status, **fields})
+        if event == 'webhook_bell_failed':
+            failed.set()
+
+    monkeypatch.setattr(bell_module, 'log_event', capture)
     monkeypatch.setattr(bell_module, '_play', lambda *_args: False)
     bell = _bell()
     try:
         status, payload, _ = _request(
             bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
         )
+        assert failed.wait(1)
     finally:
         bell.close()
-    assert status == 503
-    assert payload == {'error': 'playback unavailable'}
+    assert status == 202
+    assert payload == {'status': 'accepted', 'wav_key': '0'}
+    assert any(
+        event['event'] == 'webhook_bell_failed'
+        and event['status'] == 'failure'
+        for event in events
+    )
 
 
 def test_webhook_rate_limiting(monkeypatch):
@@ -150,9 +185,12 @@ def test_webhook_rate_limiting(monkeypatch):
 
 def test_webhook_emits_lifecycle_events(monkeypatch):
     events = []
+    completed = Event()
 
     def capture(_logger, event, status='success', level=20, **fields):
         events.append({'event': event, 'status': status, **fields})
+        if event == 'webhook_bell_completed':
+            completed.set()
 
     monkeypatch.setattr(bell_module, 'log_event', capture)
     monkeypatch.setattr(bell_module, '_play', lambda *_args: True)
@@ -161,6 +199,7 @@ def test_webhook_emits_lifecycle_events(monkeypatch):
         status, _, _ = _request(
             bell.webhook_address, {'wav_key': '0'}, 'bell-secret'
         )
+        assert completed.wait(1)
     finally:
         bell.close()
     assert status == 202
