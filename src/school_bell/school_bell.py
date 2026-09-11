@@ -69,6 +69,7 @@ class SchoolBell(object):
         device: str = None,
         buzz_gpio: Union[int, List[int]] = None,
         buzz_active_high: bool = True,
+        relays: list = None,
         timeout: int = None,
         holidays: str = None,
         trigger: dict = None,
@@ -161,7 +162,7 @@ class SchoolBell(object):
         if not isinstance(buzz_active_high, bool):
             raise TypeError('buzz_active_high should be a boolean!')
         self.__buzz_active_high = buzz_active_high
-        self.buzzer = buzz_gpio
+        self._configure_gpio_outputs(buzz_gpio, relays)
         self.timeout = timeout or 10
         self.openholidays = holidays or None
         self._configure_disable_calendar(disable_calendar)
@@ -183,6 +184,15 @@ class SchoolBell(object):
         if not self.__check:
             self._start_monitoring()
             self._configure_heartbeat()
+
+    def _configure_gpio_outputs(self, buzz_gpio, relays) -> None:
+        """Choose legacy or WAVE-key-specific relay configuration."""
+        if buzz_gpio is not None and relays is not None:
+            raise ValueError('buzz_gpio and relays cannot be combined!')
+        if relays is None:
+            self.buzzer = buzz_gpio
+        else:
+            self._configure_relays(relays)
             log_event(self.log, 'service_started')
 
     @property
@@ -330,7 +340,13 @@ class SchoolBell(object):
                 'schedule': copy.deepcopy(self.__schedule_config),
                 'trigger_hosts': sorted(self.trigger.keys()),
                 'gpio_pins': list(self.__buzzer_pins),
-                'gpio_active_high': self.__buzz_active_high,
+                'gpio_active_high': self._gpio_active_high(
+                    self.__relay_configs
+                ),
+                'relays': (
+                    copy.deepcopy(self.__relay_configs)
+                    if self.__keyed_relays else None
+                ),
                 'last_ring': copy.deepcopy(self.__last_ring),
                 'last_error': copy.deepcopy(self.__last_error),
                 'active_bell': copy.deepcopy(self.__active_bell),
@@ -537,9 +553,62 @@ class SchoolBell(object):
                 "buzz_gpio should be an integer or a list of integers!"
             )
 
+        relay_configs = [
+            {
+                'gpio': pin,
+                'wav_keys': None,
+                'active_high': self.__buzz_active_high,
+            }
+            for pin in gpio_pins
+        ]
+        self._configure_relay_outputs(relay_configs, keyed=False)
+
+    def _configure_relays(self, relays: list) -> None:
+        """Configure WAVE-key-specific relay outputs."""
+        if not isinstance(relays, list):
+            raise TypeError('relays should be a list!')
+        normalized = []
+        for relay in relays:
+            if not isinstance(relay, dict):
+                raise TypeError('each relay should be a dictionary!')
+            gpio = relay.get('gpio')
+            wav_keys = relay.get('wav_keys')
+            active_high = relay.get('active_high', True)
+            if not isinstance(gpio, int) or isinstance(gpio, bool):
+                raise TypeError('relay gpio should be an integer!')
+            if isinstance(wav_keys, str):
+                wav_keys = [wav_keys]
+            if not (
+                isinstance(wav_keys, list) and wav_keys and
+                all(isinstance(key, str) and key for key in wav_keys)
+            ):
+                raise TypeError(
+                    'relay wav_keys should be a string or a non-empty list '
+                    'of strings!'
+                )
+            if not isinstance(active_high, bool):
+                raise TypeError('relay active_high should be a boolean!')
+            normalized.append({
+                'gpio': gpio,
+                'wav_keys': list(wav_keys),
+                'active_high': active_high,
+            })
+        pins = [relay['gpio'] for relay in normalized]
+        if len(pins) != len(set(pins)):
+            raise ValueError('relays should use unique GPIO pins!')
+        self._configure_relay_outputs(normalized, keyed=True)
+
+    def _configure_relay_outputs(
+        self, relay_configs: list, keyed: bool
+    ) -> None:
+        """Initialize normalized relay outputs in their safe state."""
+        self.__relay_configs = relay_configs
+        self.__keyed_relays = keyed
         self.__buzzer = []
-        self.__buzzer_pins = gpio_pins
-        if not gpio_pins:
+        self.__buzzer_pins = [relay['gpio'] for relay in relay_configs]
+        if keyed:
+            self.log.info('key-specific relays = %s', relay_configs or False)
+        if not relay_configs:
             return
         if self.__check:
             return
@@ -548,11 +617,11 @@ class SchoolBell(object):
             try:
                 self.__buzzer = [
                     Buzzer(
-                        pin,
-                        active_high=self.__buzz_active_high,
+                        relay['gpio'],
+                        active_high=relay['active_high'],
                         initial_value=False,
                     )
-                    for pin in gpio_pins
+                    for relay in relay_configs
                 ]
                 for buzzer in self.__buzzer:
                     self.log.debug(f"  {buzzer}")
@@ -596,9 +665,26 @@ class SchoolBell(object):
             self.log,
             'gpio_test',
             gpio_pins=list(self.__buzzer_pins),
-            gpio_active_high=self.__buzz_active_high,
+            gpio_active_high=self._gpio_active_high(self.__relay_configs),
         )
         return True
+
+    @staticmethod
+    def _gpio_active_high(relay_configs: list):
+        """Return one polarity or a pin-aligned list for mixed outputs."""
+        values = [relay['active_high'] for relay in relay_configs]
+        if not values:
+            return None
+        return values[0] if len(set(values)) == 1 else values
+
+    def _relay_configs_for_key(self, key: str) -> list:
+        """Return only relay configurations selected by a WAVE key."""
+        if not self.__keyed_relays:
+            return list(self.__relay_configs)
+        return [
+            relay for relay in self.__relay_configs
+            if str(key) in relay['wav_keys']
+        ]
 
     def _set_gpio_state(
         self,
@@ -609,6 +695,10 @@ class SchoolBell(object):
         """Switch GPIO outputs and emit a structured state event."""
         pins = list(self.__buzzer_pins if pins is None else pins)
         buzzers = list(self.buzzer if buzzers is None else buzzers)
+        relay_configs = [
+            relay for relay in self.__relay_configs
+            if relay['gpio'] in pins
+        ]
         event = 'gpio_activated' if active else 'gpio_deactivated'
         state = 'active' if active else 'inactive'
         operation = 'on' if active else 'off'
@@ -629,7 +719,7 @@ class SchoolBell(object):
                 status='failure',
                 level=40,
                 gpio_pins=pins,
-                gpio_active_high=self.__buzz_active_high,
+                gpio_active_high=self._gpio_active_high(relay_configs),
                 gpio_state='unknown',
                 error_category=(
                     'gpio_activation_error' if active
@@ -642,7 +732,7 @@ class SchoolBell(object):
             self.log,
             event,
             gpio_pins=pins,
-            gpio_active_high=self.__buzz_active_high,
+            gpio_active_high=self._gpio_active_high(relay_configs),
             gpio_state=state,
         )
 
@@ -1343,6 +1433,13 @@ class SchoolBell(object):
         """Execute an accepted bell request and return its cancel state."""
         wav = self.get_wav(key)
         self.log.info('ring %s: %s', key, os.path.basename(wav))
+        relay_configs = self._relay_configs_for_key(key)
+        relay_pins = [relay['gpio'] for relay in relay_configs]
+        buzzer_by_pin = dict(zip(self.__buzzer_pins, self.buzzer))
+        relay_buzzers = [
+            buzzer_by_pin[pin] for pin in relay_pins if pin in buzzer_by_pin
+        ]
+        gpio_active_high = self._gpio_active_high(relay_configs)
         operations = []
         if include_remote:
             for host, root in self.trigger.items():
@@ -1359,8 +1456,8 @@ class SchoolBell(object):
         ]
         cancelled = False
         try:
-            if self.buzzer:
-                self._set_gpio_state(True)
+            if relay_buzzers:
+                self._set_gpio_state(True, relay_pins, relay_buzzers)
             for thread in threads:
                 thread.start()
             if mode == 'hold':
@@ -1388,15 +1485,15 @@ class SchoolBell(object):
             )
             log_event(
                 self.log, 'bell_ring', status='failure', level=40,
-                wav_key=key, gpio_pins=list(self.__buzzer_pins),
-                gpio_active_high=self.__buzz_active_high,
+                wav_key=key, gpio_pins=relay_pins,
+                gpio_active_high=gpio_active_high,
                 error_category='bell_error', **event_fields,
             )
             raise
         finally:
             self.__active_playback = None
-            if self.buzzer:
-                self._set_gpio_state(False)
+            if relay_buzzers:
+                self._set_gpio_state(False, relay_pins, relay_buzzers)
         with self.__state_lock:
             self.__last_ring = {
                 'time': datetime.datetime.now(
@@ -1409,8 +1506,8 @@ class SchoolBell(object):
         log_event(
             self.log, 'bell_ring',
             status='cancelled' if cancelled else 'success', wav_key=key,
-            gpio_pins=list(self.__buzzer_pins),
-            gpio_active_high=self.__buzz_active_high, **event_fields,
+            gpio_pins=relay_pins,
+            gpio_active_high=gpio_active_high, **event_fields,
         )
         return cancelled
 

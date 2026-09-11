@@ -143,6 +143,62 @@ def test_cross_field_references_are_validated():
         validate_config(supplied)
 
 
+def test_key_specific_relays_normalize_single_and_numeric_wav_keys():
+    supplied = minimal_config()
+    supplied['wav']['1'] = 'workshop.wav'
+    supplied['relays'] = [
+        {'gpio': 26, 'wav_keys': '0', 'active_high': False},
+        {'gpio': 20, 'wav_keys': [0, '1']},
+    ]
+
+    config = validate_config(supplied)
+
+    assert config.relays[0].wav_keys == ['0']
+    assert config.relays[0].active_high is False
+    assert config.relays[1].wav_keys == ['0', '1']
+    assert config.relays[1].active_high is True
+
+
+@pytest.mark.parametrize(
+    'relays, message',
+    [
+        ([{'gpio': 26, 'wav_keys': []}], 'at least one WAVE key'),
+        ([{'gpio': 26, 'wav_keys': ['missing']}], 'unknown WAV key'),
+        (
+            [
+                {'gpio': 26, 'wav_keys': '0'},
+                {'gpio': 26, 'wav_keys': '0'},
+            ],
+            'unique GPIO pins',
+        ),
+    ],
+)
+def test_invalid_key_specific_relays_are_rejected(relays, message):
+    supplied = minimal_config()
+    supplied['relays'] = relays
+
+    with pytest.raises(ValidationError, match=message):
+        validate_config(supplied)
+
+
+def test_legacy_and_key_specific_relays_cannot_be_combined():
+    supplied = minimal_config()
+    supplied['buzz_gpio'] = 17
+    supplied['relays'] = [{'gpio': 26, 'wav_keys': '0'}]
+
+    with pytest.raises(ValidationError, match='cannot be combined'):
+        validate_config(supplied)
+
+
+def test_manual_input_cannot_reuse_key_specific_relay_pin():
+    supplied = minimal_config()
+    supplied['relays'] = [{'gpio': 26, 'wav_keys': '0'}]
+    supplied['manual_bell'] = {'gpio': 26, 'wav_key': '0'}
+
+    with pytest.raises(ValidationError, match='must not also be a relay'):
+        validate_config(supplied)
+
+
 def test_json_schema_forbids_unknown_fields():
     schema = config_json_schema()
 

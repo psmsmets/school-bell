@@ -93,8 +93,10 @@ Stable event names include ``service_started``, ``service_stopped``,
 ``schedule_loaded``, ``schedule_entry_loaded``, ``bell_ring``,
 ``bell_skipped_holiday``, ``gpio_test``,
 ``gpio_activated``, ``gpio_deactivated``, ``remote_trigger``, and
-``health_status``. GPIO events include the configured pins, polarity and
-resulting logical state. Remote-trigger events include the remote host, WAV
+``health_status``. GPIO and bell events include only the selected pins. Their
+``gpio_active_high`` value is a boolean when every selected relay has the same
+polarity, a pin-aligned boolean list for mixed polarities, or ``null`` when no
+relay matches. Remote-trigger events include the remote host, WAV
 key, duration and a consistent success or failure status. Future calendar
 monitoring can add ``bell_skipped_calendar``, ``calendar_refresh`` and
 ``calendar_error`` without changing the common fields.

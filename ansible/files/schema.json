@@ -12,8 +12,10 @@
         "1": "ClassBell-SoundBible.com-1426436341.wav"
     },
     "root": "${HOME}/samples",
-    "buzz_gpio": [26, 20],
-    "buzz_active_high": false,
+    "relays": [
+        {"gpio": 26, "wav_keys": "0", "active_high": false},
+        {"gpio": 20, "wav_keys": ["0", "1"], "active_high": false}
+    ],
     "manual_bell": {
         "gpio": 17,
         "wav_key": "0",
