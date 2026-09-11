@@ -120,6 +120,8 @@ These actions start in background threads and do not delay the local signal.
 Their success or failure is reported as ``manual_remote_trigger``. A failed
 remote action does not undo or change the local result.
 
+.. _expose-bell-webhook:
+
 Expose a bell webhook
 ---------------------
 
@@ -142,6 +144,70 @@ The built-in server provides plain HTTP. Keep it on ``127.0.0.1`` and expose
 it through a TLS reverse proxy such as nginx, Caddy or Apache. Configure
 certificate validation, request-size limits and trusted-network access at the
 proxy. Never expose the built-in port directly to an untrusted network.
+
+Local HTTPS with Caddy
+~~~~~~~~~~~~~~~~~~~~~~
+
+Caddy can provide HTTPS without a public domain or internet-facing service. It
+creates a local certificate authority (CA), issues and renews the server
+certificate, and proxies requests to School Bell over loopback. Install Caddy
+using the `official installation instructions`_, then create or extend
+``/etc/caddy/Caddyfile`` on the receiving node:
+
+.. code-block:: text
+
+   pibell-yard.local {
+       tls internal
+       request_body {
+           max_size 4KB
+       }
+       reverse_proxy 127.0.0.1:8081
+   }
+
+Use a hostname that resolves to the receiving node from every sending node.
+Local DNS or mDNS can provide this; a controlled ``/etc/hosts`` entry is also
+sufficient. The hostname in the webhook URL must match the hostname in the
+Caddyfile.
+
+Validate and load the configuration:
+
+.. code-block:: console
+
+   $ sudo caddy validate --config /etc/caddy/Caddyfile
+   $ sudo systemctl reload caddy
+
+When Caddy runs as a systemd service, its local root certificate is normally
+stored at:
+
+.. code-block:: text
+
+   /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt
+
+Install a copy of this *public* root certificate in the trust store of every
+sending node. Do not copy any private key from Caddy's data directory. On a
+Debian or Raspberry Pi OS sender, copy the certificate securely to the node and
+run:
+
+.. code-block:: console
+
+   $ sudo install -m 0644 root.crt \
+       /usr/local/share/ca-certificates/school-bell-caddy.crt
+   $ sudo update-ca-certificates
+
+The bearer token remains required after enabling HTTPS. Test the complete path
+from a sending node, without disabling certificate verification:
+
+.. code-block:: console
+
+   $ curl -X POST https://pibell-yard.local/bell \
+       -H 'Authorization: Bearer replace-with-a-long-random-token' \
+       -H 'Content-Type: application/json' \
+       --data '{"wav_key":"lesson"}'
+
+Keep Caddy's data directory persistent because it contains the local CA. Back
+up and protect it like other private key material. All proxied requests reach
+the built-in rate limiter from the loopback address, so its limit is shared by
+all clients using this proxy.
 
 Send exactly one configured WAVE key:
 
@@ -184,3 +250,5 @@ Verify and diagnose
 
 See :doc:`configuration-reference` for every field and :doc:`networking` for
 firewall and outage behavior.
+
+.. _official installation instructions: https://caddyserver.com/docs/install

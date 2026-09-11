@@ -16,7 +16,8 @@ features that have been configured or for administrative operations:
 Firewall rules should allow only the required outbound destinations and
 explicitly authorized inbound status or webhook traffic. The built-in HTTP
 servers do not provide TLS; bind them to a trusted interface or localhost and
-place a TLS reverse proxy in front of them.
+place a TLS reverse proxy in front of them. See :ref:`expose-bell-webhook` for
+a local HTTPS example with Caddy.
 
 Time synchronization
 --------------------

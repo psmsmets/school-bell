@@ -236,6 +236,7 @@ Inbound webhook
 ``webhook.host`` (string, default ``127.0.0.1``)
    Bind address. Keep the loopback default when a reverse proxy provides TLS.
    ``0.0.0.0`` exposes the endpoint on all network interfaces.
+   See :ref:`expose-bell-webhook` for a local HTTPS example with Caddy.
 
 ``webhook.port`` (integer 0–65535, default ``8081``)
    Listening TCP port. Port ``0`` is mainly useful in tests because the OS
