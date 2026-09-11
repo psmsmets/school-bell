@@ -6,8 +6,8 @@ commit history. Older releases did not include contemporary release notes, so
 the descriptions below only summarize changes that can be verified from the
 repository.
 
-Unreleased
-----------
+1.0.0 — 2026-09-11
+------------------
 
 Added
 ~~~~~
@@ -37,6 +37,8 @@ Changed
 Fixed
 ~~~~~
 
+* Test mode now reports busy GPIO pins with actionable guidance instead of a
+  traceback.
 * Webhook endpoints now return ``202 Accepted`` before bell playback finishes,
   preventing successful remote bells from being reported as read timeouts.
 
