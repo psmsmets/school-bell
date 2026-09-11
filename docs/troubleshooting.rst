@@ -49,7 +49,9 @@ GPIO does not switch
 --------------------
 
 Check BCM pin numbering, relay polarity, power and service-user permissions.
-Active-low relay boards require ``"buzz_active_high": false``. Never diagnose
+Active-low relay boards require ``"buzz_active_high": false`` for legacy
+outputs or ``"active_high": false`` on each key-specific relay. Also confirm
+that the requested WAVE key occurs in the relay's ``wav_keys``. Never diagnose
 relay wiring with a live high-voltage or bell circuit attached. The pin-number
 explanation, Waveshare mapping and safe test sequence are in :doc:`GPIO`.
 

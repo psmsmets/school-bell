@@ -79,6 +79,6 @@ Limits of a generated schema
 
 Some checks depend on relationships or runtime resources and cannot be fully
 expressed by editor hints alone. Examples include verifying that every schedule
-key selects an existing ``wav`` entry, that a manual input does not reuse an
-output pin, that a WAVE file exists, and that a remote calendar responds.
+or relay key selects an existing ``wav`` entry, that a manual input does not
+reuse an output pin, that a WAVE file exists, and that a remote calendar responds.
 Pydantic and ``--check`` remain the final authority.

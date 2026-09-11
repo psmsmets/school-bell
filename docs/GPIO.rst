@@ -35,8 +35,44 @@ GPIO number merely because its physical header position has that number.
 Relay outputs
 -------------
 
+Key-specific relays
+~~~~~~~~~~~~~~~~~~~
+
+Use ``relays`` when different outputs must respond to different WAVE keys. A
+relay accepts one key as a string or multiple keys as a list:
+
+.. code-block:: json
+
+   {
+     "relays": [
+       {
+         "gpio": 26,
+         "wav_keys": "bell",
+         "active_high": false
+       },
+       {
+         "gpio": 20,
+         "wav_keys": ["workshop", "bell-and-light"],
+         "active_high": false
+       }
+     ]
+   }
+
+Only relays matching the requested WAVE key are active during playback. A key
+without a matching relay remains a valid audio-only signal. Scheduled,
+webhook and manual-button signals all use the same selection rule. The manual
+button remains one input and selects outputs through its configured
+``wav_key``.
+
+Every relay key must exist in ``wav``. GPIO pins must be unique and cannot
+reuse ``manual_bell.gpio``. ``active_high`` defaults to ``true`` independently
+for each relay.
+
+Legacy relay outputs
+~~~~~~~~~~~~~~~~~~~~
+
 ``buzz_gpio`` accepts one BCM GPIO number or a list. With multiple entries all
-configured relays switch together while the bell signal is playing:
+configured relays switch together for every WAVE key:
 
 .. code-block:: json
 
@@ -55,6 +91,9 @@ configured relays switch together while the bell signal is playing:
 
 * ``true`` (the default) drives an output high to ring;
 * ``false`` drives an output low to ring and is required for active-low boards.
+
+Do not combine ``buzz_gpio`` with ``relays``. Existing configurations can keep
+using the legacy settings until key-specific switching is needed.
 
 School Bell initializes every output to its configured inactive state and
 returns it to that state after ringing. Confirm the polarity for the actual
@@ -85,7 +124,8 @@ The three channels of the `Waveshare RPi Relay Board`_ use these values:
 
 The printed P25, P28 and P29 labels use wiringPi numbering. Put the BCM values
 ``26``, ``20`` and ``21`` in the School Bell configuration. This board has
-active-low inputs, so configure ``"buzz_active_high": false``.
+active-low inputs, so configure ``"buzz_active_high": false`` for legacy
+outputs or ``"active_high": false`` on each key-specific relay.
 
 Consult the board manufacturer's documentation as well. Revisions or other
 relay boards can use different pins and polarity.
@@ -135,10 +175,12 @@ be ``down`` or ``floating`` for hardware designed that way. A floating input
 requires a suitable external resistor and should not be left electrically
 unconnected.
 
-The input pin must not also occur in ``buzz_gpio``. ``bounce_time`` filters
-short contact bounce after pressing the button. In ``once`` mode one press
-finishes the selected sound; in ``hold`` mode releasing the button stops it,
-with the sample duration as the maximum.
+The input pin must not also occur in ``buzz_gpio`` or ``relays``.
+``bounce_time`` filters short contact bounce after pressing the button. In
+``once`` mode one press finishes the selected sound; in ``hold`` mode releasing
+the button stops it, with the sample duration as the maximum. The button's
+``wav_key`` selects the same key-specific relay outputs as a scheduled or
+webhook signal.
 
 Manual signals are deliberate overrides and are not suppressed by holiday or
 disable calendars. Only one bell signal can run at a time. See
@@ -160,9 +202,10 @@ Then disconnect the real bell circuit and run the hardware test:
 
    $ school-bell /home/pi/schema.json --test
 
-``--test`` activates each configured ``buzz_gpio`` output sequentially for one
-second and returns it to the inactive state before testing the next output. It
-also tests the configured WAVE samples, so keep audio at a safe level.
+``--test`` activates every configured legacy or key-specific relay output
+sequentially for one second and returns it to the inactive state before testing
+the next output. WAVE-key filters do not limit this hardware test. It also tests
+the configured WAVE samples, so keep audio at a safe level.
 
 If an output does not behave as expected, stop and check the BCM number, relay
 polarity, board power, connections and service-user permissions. Continue with

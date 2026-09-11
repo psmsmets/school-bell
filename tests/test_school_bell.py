@@ -288,6 +288,90 @@ def test_multiple_buzzers_switch_together(fake_buzzers, monkeypatch):
     assert [buzzer.off_calls for buzzer in bell.buzzer] == [1, 1]
 
 
+def test_relays_are_selected_by_wav_key(fake_buzzers, monkeypatch):
+    bell = SchoolBell(
+        schedule={},
+        wav={},
+        root=f"{getcwd()}/samples",
+        relays=[
+            {'gpio': 26, 'wav_keys': ['bell', 'combined'],
+             'active_high': False},
+            {'gpio': 20, 'wav_keys': ['workshop', 'combined'],
+             'active_high': True},
+        ],
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(school_bell_module, '_play', lambda *args: True)
+
+    assert bell.ring('bell') is True
+    assert FakeBuzzer.events == [(26, 'on'), (26, 'off')]
+
+    FakeBuzzer.events = []
+    assert bell.trigger_bell(
+        'workshop', source='manual_gpio', respect_calendar=False
+    ) is True
+    assert FakeBuzzer.events == [(20, 'on'), (20, 'off')]
+
+    FakeBuzzer.events = []
+    assert bell.ring('combined') is True
+    assert FakeBuzzer.events == [
+        (26, 'on'), (20, 'on'), (26, 'off'), (20, 'off')
+    ]
+
+
+def test_wav_without_matching_relay_only_plays_audio(
+    fake_buzzers, structured_events, monkeypatch
+):
+    played = []
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f'{getcwd()}/samples',
+        relays=[{'gpio': 26, 'wav_keys': 'bell'}],
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(
+        school_bell_module, '_play', lambda *args: played.append(args) or True
+    )
+
+    assert bell.ring('announcement') is True
+    assert len(played) == 1
+    assert FakeBuzzer.events == []
+    ring_event = [
+        event for event in structured_events if event['event'] == 'bell_ring'
+    ][-1]
+    assert ring_event['gpio_pins'] == []
+    assert ring_event['gpio_active_high'] is None
+
+
+def test_key_specific_relay_events_report_selected_mixed_polarities(
+    fake_buzzers, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f'{getcwd()}/samples',
+        relays=[
+            {'gpio': 26, 'wav_keys': 'combined', 'active_high': False},
+            {'gpio': 20, 'wav_keys': 'combined', 'active_high': True},
+        ],
+    )
+    monkeypatch.setattr(bell, 'is_holiday', lambda: False)
+    monkeypatch.setattr(bell, 'get_wav', lambda key, root=None: 'bell.wav')
+    monkeypatch.setattr(school_bell_module, '_play', lambda *args: True)
+
+    assert bell.ring('combined') is True
+
+    gpio_events = [
+        event for event in structured_events
+        if event['event'].startswith('gpio_')
+    ]
+    assert [event['gpio_pins'] for event in gpio_events] == [
+        [26, 20], [26, 20]
+    ]
+    assert [event['gpio_active_high'] for event in gpio_events] == [
+        [False, True], [False, True]
+    ]
+
+
 def test_gpio_events_include_state_and_cleanup_after_error(
     fake_buzzers, structured_events, monkeypatch
 ):

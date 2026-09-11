@@ -15,6 +15,7 @@ Added
 * Central Pydantic 2 validation for the complete JSON configuration.
 * Precise nested configuration error paths and JSON Schema generation.
 * Authenticated HTTP bell webhooks.
+* WAVE-key-specific relay outputs with per-relay polarity.
 * Optional SSH and webhook actions for manual GPIO bells.
 * Structured Sphinx documentation with architecture, networking, deployment,
   configuration, monitoring, ALSA and troubleshooting guides.

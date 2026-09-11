@@ -267,6 +267,42 @@ class WebhookConfig(ConfigModel):
         return self
 
 
+class RelayConfig(ConfigModel):
+    gpio: int
+    wav_keys: str | list[str]
+    active_high: bool = True
+
+    @field_validator('gpio')
+    @classmethod
+    def gpio_is_not_boolean(cls, value):
+        if isinstance(value, bool):
+            raise ValueError('must be an integer')
+        return value
+
+    @field_validator('wav_keys', mode='before')
+    @classmethod
+    def normalize_wav_keys(cls, value):
+        values = [value] if isinstance(value, (str, int)) else value
+        if not isinstance(values, list):
+            return values
+        return [
+            str(item) if isinstance(item, int) and not isinstance(item, bool)
+            else item
+            for item in values
+        ]
+
+    @field_validator('wav_keys')
+    @classmethod
+    def valid_wav_keys(cls, value):
+        if not value:
+            raise ValueError('must contain at least one WAVE key')
+        if any(not key for key in value):
+            raise ValueError('must contain non-empty WAVE keys')
+        if len(value) != len(set(value)):
+            raise ValueError('must not contain duplicate WAVE keys')
+        return value
+
+
 class SchoolBellConfig(ConfigModel):
     """Complete user-controlled ``config.json`` contract."""
 
@@ -276,6 +312,7 @@ class SchoolBellConfig(ConfigModel):
     device: str | None = None
     buzz_gpio: int | list[int] | None = None
     buzz_active_high: bool = True
+    relays: list[RelayConfig] | None = None
     timeout: LegacyInt | None = None
     holidays: str | None = None
     trigger: dict[str, str] | None = None
@@ -365,20 +402,38 @@ class SchoolBellConfig(ConfigModel):
                         f'schedule.{day}.{configured_time} refers to unknown '
                         f'WAV key {wav_key!r}'
                     )
+        relay_pins = self._validate_relays(wav_keys)
         if self.manual_bell is not None:
             if self.manual_bell.wav_key not in wav_keys:
                 raise ValueError(
                     'manual_bell.wav_key refers to an unknown WAV key'
                 )
-            outputs = (
+            legacy_outputs = (
                 [self.buzz_gpio] if isinstance(self.buzz_gpio, int)
                 else (self.buzz_gpio or [])
             )
+            outputs = legacy_outputs + relay_pins
             if self.manual_bell.gpio in outputs:
                 raise ValueError(
-                    'manual_bell.gpio must not also be a buzz_gpio output'
+                    'manual_bell.gpio must not also be a relay output'
                 )
         return self
+
+    def _validate_relays(self, wav_keys: set[str]) -> list[int]:
+        """Validate relay exclusivity, pin uniqueness and WAVE references."""
+        if self.relays is not None and self.buzz_gpio is not None:
+            raise ValueError('buzz_gpio and relays cannot be combined')
+        relay_pins = [relay.gpio for relay in self.relays or []]
+        if len(relay_pins) != len(set(relay_pins)):
+            raise ValueError('relays must use unique GPIO pins')
+        for relay in self.relays or []:
+            unknown = set(relay.wav_keys) - wav_keys
+            if unknown:
+                raise ValueError(
+                    f'relays GPIO {relay.gpio} refers to unknown WAV key(s): '
+                    f'{sorted(unknown)!r}'
+                )
+        return relay_pins
 
 
 def validate_config(config: object) -> SchoolBellConfig:

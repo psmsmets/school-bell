@@ -80,10 +80,11 @@ difference between scheduled and manual signals.
 Outputs and triggers
 --------------------
 
-``device`` selects an ALSA playback device. ``buzz_gpio`` accepts one BCM GPIO
-number or a list. ``buzz_active_high`` defaults to ``true``; set it to
-``false`` for active-low relay boards. See :doc:`GPIO` before selecting pins or
-connecting a relay.
+``device`` selects an ALSA playback device. The legacy ``buzz_gpio`` setting
+activates one or more outputs for every WAVE key. Use ``relays`` when outputs
+must respond only to selected WAVE keys or need different polarities. The two
+forms cannot be combined. See :doc:`GPIO` before selecting pins or connecting
+a relay.
 
 ``manual_bell`` configures one physical input button. Its ``gpio`` cannot also
 be an output, and its ``wav_key`` must exist. ``mode`` is ``once`` or ``hold``;
@@ -112,7 +113,7 @@ integration at a time and run ``--check`` after every change. A typical order
 is:
 
 #. confirm local WAVE playback;
-#. add GPIO relay outputs if the installation uses them;
+#. add legacy or key-specific GPIO relay outputs if the installation uses them;
 #. add holiday or calendar suppression;
 #. add a physical manual button or authenticated webhook;
 #. add monitoring and verify Graylog or the HTTP health endpoint.

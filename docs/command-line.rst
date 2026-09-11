@@ -37,9 +37,10 @@ Diagnostic and one-off actions
 
 ``--test``
    Exercise real hardware during initialization: activate every configured
-   ``buzz_gpio`` output sequentially for one second and test every configured
-   WAVE file. Disconnect the external bell circuit and use a safe audio level
-   first. ``--check`` remains non-destructive when both flags are supplied.
+   legacy or key-specific relay output sequentially for one second and test
+   every configured WAVE file. Disconnect the external bell circuit and use a
+   safe audio level first. ``--check`` remains non-destructive when both flags
+   are supplied.
 
 ``--debug``
    Enable verbose local logging. It can reveal hostnames and operational
@@ -80,7 +81,7 @@ tested release or commit with ``ansible/update.yml`` instead.
 GPIO configuration
 ------------------
 
-Relay pins are configured only through ``buzz_gpio`` and
-``buzz_active_high`` in JSON. There is no command-line GPIO override. This
-keeps the validated configuration, runtime behavior and reported configuration
-hash aligned. See :doc:`GPIO` for wiring and testing.
+Relay pins are configured through legacy ``buzz_gpio``/``buzz_active_high`` or
+the key-specific ``relays`` list in JSON. There is no command-line GPIO
+override. This keeps the validated configuration, runtime behavior and
+reported configuration hash aligned. See :doc:`GPIO` for wiring and testing.

@@ -30,8 +30,14 @@ are placeholders.
        },
        "root": "/home/pi/samples",
        "device": "plughw:CARD=Device,DEV=0",
-       "buzz_gpio": [20, 26],
-       "buzz_active_high": true,
+       "relays": [
+           {"gpio": 26, "wav_keys": "lesson", "active_high": false},
+           {
+               "gpio": 20,
+               "wav_keys": ["lesson", "break"],
+               "active_high": false
+           }
+       ],
        "timeout": 10,
        "holidays": "BE-NL",
        "trigger": {
@@ -124,6 +130,21 @@ Top-level fields
    active-low relay boards. Confirm the safe inactive state before connecting
    a real bell circuit.
 
+``relays`` (array of objects or null; default ``null``)
+   Key-specific GPIO outputs. Each entry selects one BCM pin, one or more WAVE
+   keys and its own polarity. Do not combine this field with ``buzz_gpio``.
+
+``relays[].gpio`` (integer, required)
+   Unique BCM GPIO output. It must differ from ``manual_bell.gpio``.
+
+``relays[].wav_keys`` (string or array of strings, required)
+   One WAVE key or a non-empty list of keys that activates this relay. Every
+   key must exist in ``wav``. Keys without a matching relay play audio only.
+
+``relays[].active_high`` (boolean, default ``true``)
+   Electrical polarity for this relay. Set it to ``false`` for an active-low
+   relay input.
+
 ``timeout`` (integer or null, effective default 10 seconds)
    General timeout used by OpenHolidays and legacy SSH remote playback.
    Historical numeric strings are accepted. Use a positive value in new files.
@@ -165,10 +186,12 @@ Physical manual bell
 
 ``manual_bell.gpio`` (integer, required)
    BCM GPIO input connected to the button. It must differ from every
-   ``buzz_gpio`` output. See :doc:`GPIO` for a pull-up wiring example.
+   ``buzz_gpio`` or ``relays`` output. See :doc:`GPIO` for a pull-up wiring
+   example.
 
 ``manual_bell.wav_key`` (string, required)
-   Entry from ``wav`` to play when the button is pressed.
+   Entry from ``wav`` to play when the button is pressed. It also selects any
+   matching key-specific relay outputs.
 
 ``manual_bell.mode`` (``once`` or ``hold``, default ``once``)
    ``once`` plays the complete signal per press. ``hold`` stops playback when
