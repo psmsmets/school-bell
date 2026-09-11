@@ -1076,19 +1076,37 @@ class SchoolBell(object):
                 rejection_reason='invalid_wav_key',
             )
             return 400, {'error': 'invalid wav_key'}
-        try:
-            accepted = self.trigger_bell(
-                key,
-                source='webhook',
-                mode='once',
-                respect_calendar=False,
-                include_remote=False,
-            )
-        except Exception:
-            return 503, {'error': 'playback unavailable'}
+        accepted, source_fields = self._accept_bell(
+            key, source='webhook', mode='once'
+        )
         if not accepted:
             return 409, {'error': 'bell active'}
+        try:
+            Thread(
+                target=self._run_webhook_bell,
+                args=(key, source_fields),
+                name='school-bell-webhook-ring',
+                daemon=True,
+            ).start()
+        except Exception as err:
+            self._release_accepted_bell()
+            self._log_source_event(
+                'webhook', 'failed', status='failure', level=40,
+                error_category='webhook_bell_error', error=str(err),
+                **source_fields,
+            )
+            return 503, {'error': 'playback unavailable'}
         return 202, {'status': 'accepted', 'wav_key': key}
+
+    def _run_webhook_bell(self, key: str, source_fields: dict) -> None:
+        """Complete an accepted webhook signal outside the HTTP request."""
+        try:
+            self._run_accepted_bell(
+                key, 'webhook', 'once', None, False, {}, [], source_fields
+            )
+        except Exception:
+            # _run_accepted_bell already records the structured failure.
+            pass
 
     def trigger_bell(
         self, key: str, source: str, mode: str = 'once',
@@ -1098,6 +1116,23 @@ class SchoolBell(object):
     ) -> bool:
         """Run one exclusive bell signal from any current or future source."""
         key = str(key)
+        event_fields = dict(event_fields or {})
+        accepted, source_fields = self._accept_bell(
+            key, source, mode, event_fields, source_gpio
+        )
+        if not accepted:
+            return False
+        return self._run_accepted_bell(
+            key, source, mode, cancel_event, include_remote, event_fields,
+            manual_remote_bells or [], source_fields,
+            respect_calendar=respect_calendar,
+        )
+
+    def _accept_bell(
+        self, key: str, source: str, mode: str,
+        event_fields: dict = None, source_gpio: int = None,
+    ):
+        """Atomically reserve the bell and return its structured fields."""
         event_fields = dict(event_fields or {})
         source_fields = {
             'trigger_source': source, 'wav_key': key, 'mode': mode,
@@ -1125,9 +1160,8 @@ class SchoolBell(object):
                 rejection_reason='bell_active',
                 **source_fields,
             )
-            return False
+            return False, source_fields
 
-        started = monotonic()
         with self.__state_lock:
             self.__active_bell = {
                 'source': source, 'wav_key': key, 'mode': mode,
@@ -1135,13 +1169,28 @@ class SchoolBell(object):
                     datetime.timezone.utc
                 ).isoformat(),
             }
+        return True, source_fields
+
+    def _release_accepted_bell(self) -> None:
+        """Release a reservation whose worker could not be started."""
+        with self.__state_lock:
+            self.__active_bell = None
+        self.__bell_lock.release()
+
+    def _run_accepted_bell(
+        self, key: str, source: str, mode: str, cancel_event: Event,
+        include_remote: bool, event_fields: dict, manual_remote_bells: list,
+        source_fields: dict, respect_calendar: bool = False,
+    ) -> bool:
+        """Execute a bell signal whose exclusive lock is already held."""
+        started = monotonic()
         try:
             if respect_calendar and self._skip_disabled_bell(
                 key, event_fields
             ):
                 return False
             self._dispatch_manual_remote_bells(
-                manual_remote_bells or [], source_fields
+                manual_remote_bells, source_fields
             )
             cancelled = self._execute_bell(
                 key, mode, cancel_event, include_remote, event_fields
@@ -1169,9 +1218,7 @@ class SchoolBell(object):
             )
             raise
         finally:
-            with self.__state_lock:
-                self.__active_bell = None
-            self.__bell_lock.release()
+            self._release_accepted_bell()
 
     def _log_source_event(self, source: str, phase: str, **fields):
         """Emit lifecycle events for externally initiated bell signals."""

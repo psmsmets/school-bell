@@ -19,6 +19,11 @@ servers do not provide TLS; bind them to a trusted interface or localhost and
 place a TLS reverse proxy in front of them. See :ref:`expose-bell-webhook` for
 a local HTTPS example with Caddy.
 
+For direct webhook traffic on a trusted LAN, a stable local IP address avoids
+hostname or mDNS lookup latency. Hostnames are easier to maintain when devices
+are renumbered, but require reliable local DNS. This choice affects connection
+setup only; it does not change how long the receiving endpoint takes to reply.
+
 Time synchronization
 --------------------
 

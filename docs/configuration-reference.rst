@@ -212,7 +212,9 @@ Remote webhook entry
    Required value ``webhook``.
 
 ``url``
-   Required HTTP(S) endpoint URL.
+   Required HTTP(S) endpoint URL. On trusted local networks, a stable local IP
+   address avoids hostname or mDNS lookup latency. A hostname remains suitable
+   when local name resolution is reliable and ease of renumbering is preferred.
 
 ``headers``
    Optional string-to-string object for additional request headers; default

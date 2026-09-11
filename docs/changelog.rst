@@ -33,6 +33,12 @@ Changed
 * CI tests CPython 3.11 through 3.14, PyPy 3.11 and the Sphinx build.
 * The obsolete Mopidy integration guide was removed.
 
+Fixed
+~~~~~
+
+* Webhook endpoints now return ``202 Accepted`` before bell playback finishes,
+  preventing successful remote bells from being reported as read timeouts.
+
 Removed
 ~~~~~~~
 

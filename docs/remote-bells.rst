@@ -120,6 +120,13 @@ These actions start in background threads and do not delay the local signal.
 Their success or failure is reported as ``manual_remote_trigger``. A failed
 remote action does not undo or change the local result.
 
+On a trusted local network, prefer a stable local IP address such as
+``http://192.168.1.25:8081/bell`` when hostname or mDNS resolution adds
+noticeable latency. A hostname is more readable and easier to renumber, but it
+depends on reliable local name resolution. Using an IP address avoids that
+lookup; it does not compensate for a slow HTTP response from the receiving
+service.
+
 .. _expose-bell-webhook:
 
 Expose a bell webhook
@@ -221,18 +228,20 @@ Send exactly one configured WAVE key:
 =================  ==========================================================
 HTTP status        Meaning
 =================  ==========================================================
-``202``            The local signal was accepted.
+``202``            The local signal was accepted for background execution.
 ``400``            The JSON or ``wav_key`` is invalid.
 ``401``            Bearer authentication failed.
 ``404``            The request path is not ``/bell``.
 ``405``            The endpoint only accepts ``POST``.
 ``409``            Another signal is already active.
 ``429``            The per-client rate limit was exceeded.
-``503``            Local playback failed.
+``503``            Background execution could not be started.
 =================  ==========================================================
 
 Responses contain keys and status information, never sample paths. Webhook
-signals are manual overrides: they do not respect holiday or disable-calendar
+signals return ``202`` immediately after atomic acceptance; playback completion
+or failure is reported through the ``webhook_bell_*`` monitoring events. They
+are manual overrides: they do not respect holiday or disable-calendar
 suppression and they do not automatically invoke the legacy top-level SSH
 ``trigger`` destinations.
 
