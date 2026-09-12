@@ -1,10 +1,10 @@
 {
   "v": 1,
   "id": "67aa20cd-0e96-4ea9-b02e-52aeb93a4e91",
-  "rev": 2,
+  "rev": 3,
   "name": "School Bell Monitoring",
   "summary": "Reusable monitoring for School Bell events received by any compatible RFC 5424 Syslog input.",
-  "description": "Installs a School Bell stream, exact application_name routing rule, JSON parsing pipeline, monitoring dashboard, and duplicate-execution and planned-failure event definitions. Requires an existing RFC 5424 UDP or TCP Syslog input.",
+  "description": "Installs a School Bell stream, exact application_name routing rule, JSON parsing pipeline, monitoring dashboard with calendar status, and duplicate-execution and planned-failure event definitions. Requires an existing RFC 5424 UDP or TCP Syslog input.",
   "vendor": "School Bell project",
   "url": "https://github.com/psmsmets/school-bell",
   "parameters": [],
@@ -752,6 +752,56 @@
                   "filters": [],
                   "column_groups": [],
                   "sort": []
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "sb_event:(calendar_refresh OR calendar_error)"
+                  },
+                  "name": "chart",
+                  "timerange": {
+                    "from": 604800,
+                    "type": "relative"
+                  },
+                  "column_limit": null,
+                  "streams": [
+                    "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                  ],
+                  "row_limit": 50,
+                  "series": [
+                    {
+                      "type": "max",
+                      "id": "Timestamp",
+                      "field": "timestamp"
+                    }
+                  ],
+                  "filter": null,
+                  "rollup": false,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "sb_device_id",
+                        "sb_calendar_source",
+                        "sb_status",
+                        "sb_operation"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": false
+                    }
+                  ],
+                  "type": "pivot",
+                  "stream_categories": [],
+                  "id": "4aa5bb96-e52c-42c7-b243-00d466563967",
+                  "filters": [],
+                  "column_groups": [],
+                  "sort": [
+                    {
+                      "type": "series",
+                      "field": "Timestamp",
+                      "direction": "Descending"
+                    }
+                  ]
                 }
               ]
             }
@@ -784,13 +834,81 @@
                 "add78d4f-c298-414c-8a9f-cc7830cdd76d": "Successful rings (this week)",
                 "57d8815e-a91e-4d20-b545-7fce49f6a91b": "School Bells reporting",
                 "9f1bfb6b-dfdb-4490-80ba-4d2c3d6f970f": "School Bell Message Table",
-                "200fab9c-acc1-4720-a71e-2c026c37a7ed": "Config hashes"
+                "200fab9c-acc1-4720-a71e-2c026c37a7ed": "Config hashes",
+                "8bb24d12-827d-466b-a2c3-683258a7cbd1": "Calendar status"
               },
               "tab": {
                 "title": "Overview "
               }
             },
             "widgets": [
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "sb_device_id",
+                        "sb_calendar_source",
+                        "sb_status",
+                        "sb_operation"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": false
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Timestamp",
+                        "thresholds": []
+                      },
+                      "function": "max(timestamp)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": {
+                    "pinned_columns": [
+                      "sb_device_id"
+                    ],
+                    "show_row_numbers": false
+                  },
+                  "formatting_settings": null,
+                  "sort": [
+                    {
+                      "type": "series",
+                      "field": "max(timestamp)",
+                      "direction": "Descending"
+                    }
+                  ]
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "sb_event:(calendar_refresh OR calendar_error)"
+                },
+                "context": null,
+                "timerange": {
+                  "from": 604800,
+                  "type": "relative"
+                },
+                "streams": [
+                  "b38dada1-d09d-44f0-b5ef-f4158576c6e0"
+                ],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "8bb24d12-827d-466b-a2c3-683258a7cbd1",
+                "filters": [],
+                "description": "Latest calendar refresh or evaluation status per bell and calendar source."
+              },
               {
                 "config": {
                   "visualization": "table",
@@ -1755,6 +1873,9 @@
               ],
               "200fab9c-acc1-4720-a71e-2c026c37a7ed": [
                 "caf80088-92e9-477f-8247-c9cc57afeb77"
+              ],
+              "8bb24d12-827d-466b-a2c3-683258a7cbd1": [
+                "4aa5bb96-e52c-42c7-b243-00d466563967"
               ]
             },
             "positions": {
@@ -1853,6 +1974,12 @@
                 "row": 17,
                 "height": 3,
                 "width": 4
+              },
+              "8bb24d12-827d-466b-a2c3-683258a7cbd1": {
+                "col": 1,
+                "row": 26,
+                "height": 4,
+                "width": "Infinity"
               }
             },
             "formatting": {

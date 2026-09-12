@@ -40,6 +40,7 @@ class DisableCalendar(object):
         self.__logger = logger
         self.__calendar = None
         self.__last_update = None
+        self.__evaluation_error_categories = set()
         self.__lock = RLock()
 
     @property
@@ -77,6 +78,7 @@ class DisableCalendar(object):
             self.__last_update = datetime.datetime.now(
                 datetime.timezone.utc
             )
+            self.__evaluation_error_categories.clear()
         if self.__logger:
             log_event(
                 self.__logger,
@@ -136,7 +138,13 @@ class DisableCalendar(object):
                 moment + datetime.timedelta(microseconds=1),
             )
         except Exception as err:
-            if self.__logger:
+            error_category = type(err).__name__
+            with self.__lock:
+                should_log = (
+                    error_category not in self.__evaluation_error_categories
+                )
+                self.__evaluation_error_categories.add(error_category)
+            if self.__logger and should_log:
                 log_event(
                     self.__logger,
                     'calendar_error',
@@ -148,7 +156,7 @@ class DisableCalendar(object):
                     ),
                     calendar_source='ical',
                     operation='evaluate',
-                    error_category=type(err).__name__,
+                    error_category=error_category,
                     cache_available=True,
                     last_success_at=(
                         self.last_update.isoformat()
@@ -156,6 +164,9 @@ class DisableCalendar(object):
                     ),
                 )
             return None
+
+        with self.__lock:
+            self.__evaluation_error_categories.clear()
 
         for event in occurrences:
             if str(event.get('STATUS', '')).upper() == 'CANCELLED':
