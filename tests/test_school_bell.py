@@ -811,3 +811,80 @@ def test_school_bell(device, monkeypatch):
     assert bell.play(0) is True
     assert bell.ring(1) != bell.is_holiday()
     assert bell.run_schedule(_test_mode=True) is True
+
+
+def test_openholidays_refresh_emits_success_event(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+    monkeypatch.setattr(
+        bell.openholidays, 'holidays',
+        lambda *_args, **_kwargs: [{'name': 'Autumn break'}],
+    )
+
+    assert bell._request_holidays() is True
+    event = structured_events[-1]
+    assert event['event'] == 'calendar_refresh'
+    assert event['status'] == 'success'
+    assert event['calendar_source'] == 'openholidays'
+    assert event['item_count'] == 1
+    assert event['cache_available'] is True
+
+
+@pytest.mark.parametrize(
+    'error, operation',
+    [
+        (school_bell_module.requests.Timeout('secret'), 'fetch'),
+        (ValueError('invalid response'), 'parse'),
+    ],
+)
+def test_openholidays_refresh_emits_safe_error_event(
+    error, operation, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+
+    def fail(*_args, **_kwargs):
+        raise error
+
+    monkeypatch.setattr(bell.openholidays, 'holidays', fail)
+
+    assert bell._request_holidays() is False
+    event = structured_events[-1]
+    assert event['event'] == 'calendar_error'
+    assert event['status'] == 'failure'
+    assert event['calendar_source'] == 'openholidays'
+    assert event['operation'] == operation
+    assert event['cache_available'] is False
+    assert event['last_success_at'] is None
+    assert 'secret' not in str(event)
+
+
+def test_empty_openholidays_result_is_available_cache(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+    responses = iter([[], school_bell_module.requests.Timeout('offline')])
+
+    def respond(*_args, **_kwargs):
+        result = next(responses)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(bell.openholidays, 'holidays', respond)
+
+    assert bell._request_holidays() is True
+    last_success_at = structured_events[-1]['last_success_at']
+    assert bell._request_holidays() is False
+    error = structured_events[-1]
+    assert error['cache_available'] is True
+    assert error['last_success_at'] == last_success_at

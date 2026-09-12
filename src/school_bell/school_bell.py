@@ -155,6 +155,7 @@ class SchoolBell(object):
 
         # Init
         self.__holidays_last_update = None
+        self.__holidays_last_success_at = None
 
         self.root = root or None
         self.test = test or False
@@ -806,6 +807,7 @@ class SchoolBell(object):
         self.__openholidays = None
         self.__holidays = list()
         self.__holidays_last_update = None
+        self.__holidays_last_success_at = None
         self.__ref_date = None
         self.log.info(f"holidays = {groupCode or False}")
 
@@ -839,6 +841,7 @@ class SchoolBell(object):
 
         startDate = datetime.date.today()
         endDate = startDate + datetime.timedelta(days=days or 180)
+        started = monotonic()
 
         self.log.info(f"request holidays from {startDate} until {endDate}")
         try:
@@ -848,13 +851,48 @@ class SchoolBell(object):
                 **kwargs
             )
             self.__holidays_last_update = startDate
-            self.log.debug("holidays request completed.")
+            self.__holidays_last_success_at = datetime.datetime.now(
+                datetime.timezone.utc
+            )
+            log_event(
+                self.log,
+                'calendar_refresh',
+                message='OpenHolidays refreshed successfully.',
+                calendar_source='openholidays',
+                operation='refresh',
+                cache_available=True,
+                last_success_at=self.__holidays_last_success_at.isoformat(),
+                item_count=len(self.__holidays),
+                start_date=str(startDate),
+                end_date=str(endDate),
+                duration_ms=round((monotonic() - started) * 1000),
+            )
             return True
-        except (requests.exceptions.RequestException, ValueError):
-            self.log.warning(
-                "holidays unavailable; local bell scheduling remains active. "
-                "Last update on %s",
-                self.__holidays_last_update,
+        except (requests.exceptions.RequestException, ValueError) as err:
+            log_event(
+                self.log,
+                'calendar_error',
+                status='failure',
+                level=30,
+                message=(
+                    'OpenHolidays unavailable; local bell scheduling remains '
+                    'active.'
+                ),
+                calendar_source='openholidays',
+                operation=(
+                    'fetch' if isinstance(
+                        err, requests.exceptions.RequestException
+                    ) else 'parse'
+                ),
+                error_category=type(err).__name__,
+                cache_available=self.__holidays_last_success_at is not None,
+                last_success_at=(
+                    self.__holidays_last_success_at.isoformat()
+                    if self.__holidays_last_success_at else None
+                ),
+                start_date=str(startDate),
+                end_date=str(endDate),
+                duration_ms=round((monotonic() - started) * 1000),
             )
             return False
 

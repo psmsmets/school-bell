@@ -78,6 +78,22 @@ sb_weekday
 sb_timezone
 ```
 
+Calendar monitoring adds these fields:
+
+```text
+sb_calendar_source
+sb_operation
+sb_cache_available
+sb_last_success_at
+sb_item_count
+sb_duration_ms
+sb_error_category
+```
+
+Use `sb_event:calendar_refresh` for successful refreshes and
+`sb_event:calendar_error` for fetch, parse, or evaluation failures. The
+configured iCalendar URL is never included.
+
 The `_short` fields are intended for compact dashboard display. Use complete
 hashes for exact Graylog filters, grouping, alerts and automation.
 
@@ -111,3 +127,8 @@ definitions. See [`DASHBOARD.md`](DASHBOARD.md) for the complete widget and
 query reference when building or customizing a dashboard manually. The weekly
 ring charts use fixed 15-minute buckets instead of an automatic interval and
 use `Europe/Brussels` for their keyword time-range boundaries.
+
+The **Operational successes** widget includes successful calendar refreshes
+while excluding `health_status` and `schedule_entry_loaded` noise. Calendar
+failures remain visible through the failure widgets and the documented
+`calendar_error` alert query.

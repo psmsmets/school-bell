@@ -36,6 +36,22 @@ class Response:
             raise requests.HTTPError(f'HTTP {self.status}')
 
 
+@pytest.fixture
+def calendar_events(monkeypatch):
+    events = []
+
+    def capture(_logger, event, status='success', level=logging.INFO,
+                message=None, **fields):
+        _logger.log(level, message or event)
+        events.append({
+            'event': event, 'status': status, 'level': level,
+            'message': message, **fields,
+        })
+
+    monkeypatch.setattr(calendar_module, 'log_event', capture)
+    return events
+
+
 def calendar_with(monkeypatch, content):
     monkeypatch.setattr(
         calendar_module.requests,
@@ -183,7 +199,9 @@ def test_recurrence_id_moves_one_occurrence(monkeypatch):
     )['summary'] == 'Moved maintenance'
 
 
-def test_failed_refresh_keeps_cache_and_hides_url(monkeypatch, caplog):
+def test_failed_refresh_keeps_cache_and_hides_url(
+    monkeypatch, caplog, calendar_events
+):
     secret_url = 'https://calendar.example/very-secret-token/calendar.ics'
     responses = iter([
         Response(ics(event(
@@ -216,11 +234,22 @@ def test_failed_refresh_keeps_cache_and_hides_url(monkeypatch, caplog):
     )['summary'] == 'Cached closure'
     assert secret_url not in caplog.text
     assert 'using cached calendar data' in caplog.text
+    success, failure = calendar_events
+    assert success['event'] == 'calendar_refresh'
+    assert success['status'] == 'success'
+    assert success['calendar_source'] == 'ical'
+    assert success['item_count'] == 1
+    assert failure['event'] == 'calendar_error'
+    assert failure['status'] == 'failure'
+    assert failure['operation'] == 'fetch'
+    assert failure['cache_available'] is True
+    assert failure['last_success_at'] == success['last_success_at']
+    assert secret_url not in str(calendar_events)
 
 
 @pytest.mark.parametrize('failure', [Response(b'not an ics'), Response(b'', 500)])
 def test_invalid_or_network_response_without_cache_enables_bells(
-    monkeypatch, caplog, failure
+    monkeypatch, caplog, failure, calendar_events
 ):
     monkeypatch.setattr(
         calendar_module.requests, 'get', lambda *_args, **_kwargs: failure
@@ -236,6 +265,45 @@ def test_invalid_or_network_response_without_cache_enables_bells(
     assert calendar.available is False
     assert calendar.blocking_event() is None
     assert 'Bells remain enabled' in caplog.text
+    assert calendar_events[-1]['event'] == 'calendar_error'
+    assert calendar_events[-1]['operation'] == (
+        'fetch' if failure.status >= 400 else 'parse'
+    )
+    assert calendar_events[-1]['cache_available'] is False
+    assert calendar_events[-1]['last_success_at'] is None
+
+
+def test_calendar_evaluation_failure_emits_structured_event(
+    monkeypatch, calendar_events
+):
+    monkeypatch.setattr(
+        calendar_module.requests,
+        'get',
+        lambda *_args, **_kwargs: Response(ics(event(
+        'UID:evaluation@example.com',
+        'DTSTART;VALUE=DATE:20260914',
+        'SUMMARY:Evaluation test',
+        ))),
+    )
+    calendar = DisableCalendar(
+        'https://calendar.example/private-token/basic.ics',
+        logger=logging.getLogger('calendar-evaluation-test'),
+    )
+    assert calendar.refresh() is True
+    monkeypatch.setattr(
+        calendar_module.recurring_ical_events,
+        'of',
+        lambda *_args: (_ for _ in ()).throw(ValueError('broken recurrence')),
+    )
+
+    assert calendar.blocking_event(
+        datetime.datetime(2026, 9, 14, 12, tzinfo=TZ)
+    ) is None
+    error = calendar_events[-1]
+    assert error['event'] == 'calendar_error'
+    assert error['status'] == 'failure'
+    assert error['operation'] == 'evaluate'
+    assert error['error_category'] == 'ValueError'
 
 
 def test_cancelled_standalone_event_is_ignored(monkeypatch):

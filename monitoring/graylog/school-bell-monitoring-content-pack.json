@@ -714,7 +714,7 @@
                 {
                   "query": {
                     "type": "elasticsearch",
-                    "query_string": "NOT sb_event:log OR NOT sb_event:health_status"
+                    "query_string": "sb_status:success AND NOT (sb_event:health_status OR sb_event:schedule_entry_loaded)"
                   },
                   "name": "chart",
                   "timerange": {
@@ -771,7 +771,7 @@
               "widget": {
                 "76d1608d-40d4-4094-84df-b03cd4a58799": "Installed versions",
                 "e5e153d8-f6cb-4f4f-89bf-5c11529d582a": "Failed events",
-                "bd386e7f-d471-453a-b90a-172f193cb302": "Events (except log or health status)",
+                "bd386e7f-d471-453a-b90a-172f193cb302": "Operational successes",
                 "95f73a22-40a4-40bf-9135-a5aa22c0f2f0": "Schedule hashes",
                 "9d802cb8-9f0b-4200-89b4-5371ddde5a1d": "Skipped Bells",
                 "f6df1198-8769-4c14-a2a2-782c7a245f88": "Successful rings (last week)",
@@ -892,7 +892,7 @@
                 },
                 "query": {
                   "type": "elasticsearch",
-                  "query_string": "NOT sb_event:log OR NOT sb_event:health_status"
+                  "query_string": "sb_status:success AND NOT (sb_event:health_status OR sb_event:schedule_entry_loaded)"
                 },
                 "context": null,
                 "timerange": {

@@ -5,9 +5,10 @@ School Bell supports two independent, optional monitoring mechanisms:
 - structured events sent to a central syslog or Graylog server;
 - a read-only HTTP service on every Raspberry Pi with `/status` and `/health`.
 
-Structured events include relay activation and deactivation as well as every
-remote trigger. Graylog can therefore filter on `gpio_activated`,
-`gpio_deactivated`, and `remote_trigger` without parsing human-readable log
+Structured events include relay activation and deactivation, every remote
+trigger, and OpenHolidays and iCalendar refresh results. Graylog can therefore
+filter on `gpio_activated`, `gpio_deactivated`, `remote_trigger`,
+`calendar_refresh`, and `calendar_error` without parsing human-readable log
 messages.
 
 Add `monitoring` at the top level of `/home/pi/schema.json`:
@@ -51,6 +52,11 @@ configuration and monitoring credentials are not emitted. Short hashes contain
 the first 12 hexadecimal characters for display only; use complete hashes for
 exact comparison and automation. `schedule_entry_loaded` events provide the
 weekday/time/WAV inventory of the configured schedule.
+
+Calendar events identify their source through `calendar_source`. Successful
+loads use `calendar_refresh` with `status=success`; fetch, parse, and evaluation
+failures use `calendar_error` with `status=failure`. Secret iCalendar URLs are
+never included.
 
 Restart the service after changing the configuration:
 

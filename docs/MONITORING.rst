@@ -91,15 +91,18 @@ Every remote record includes stable fields suitable for Graylog indexing:
 
 Stable event names include ``service_started``, ``service_stopped``,
 ``schedule_loaded``, ``schedule_entry_loaded``, ``bell_ring``,
-``bell_skipped_holiday``, ``gpio_test``,
+``bell_skipped_holiday``, ``bell_skipped_calendar``, ``calendar_refresh``,
+``calendar_error``, ``gpio_test``,
 ``gpio_activated``, ``gpio_deactivated``, ``remote_trigger``, and
 ``health_status``. GPIO and bell events include only the selected pins. Their
 ``gpio_active_high`` value is a boolean when every selected relay has the same
 polarity, a pin-aligned boolean list for mixed polarities, or ``null`` when no
 relay matches. Remote-trigger events include the remote host, WAV
-key, duration and a consistent success or failure status. Future calendar
-monitoring can add ``bell_skipped_calendar``, ``calendar_refresh`` and
-``calendar_error`` without changing the common fields.
+key, duration and a consistent success or failure status. Calendar events use
+``calendar_source`` to distinguish ``openholidays`` from ``ical``. Refresh
+events include cache state, last-success time, item count and duration. Fetch,
+parse and evaluation failures use ``calendar_error`` with an
+``error_category`` and never include the configured calendar URL.
 
 ``config_hash`` identifies the complete supplied JSON configuration, while
 ``schedule_hash`` identifies only its ``schedule`` section. Both are computed

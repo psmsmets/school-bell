@@ -69,6 +69,11 @@ in the configured timezone. After a failed refresh, the last successfully
 parsed in-memory calendar is retained. If no valid feed has ever been loaded,
 scheduled bells remain enabled and the failure is logged.
 
+When structured monitoring is configured, successful OpenHolidays and
+iCalendar loads emit ``calendar_refresh``. Fetch, parse and evaluation failures
+emit ``calendar_error``. These events report cache availability and the last
+successful update without including the configured iCalendar URL.
+
 Publish a feed
 --------------
 
