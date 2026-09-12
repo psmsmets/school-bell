@@ -28,7 +28,10 @@ Diagnostic and one-off actions
    iCalendar feed. It does not play audio, switch GPIO, contact remote bells,
    start HTTP listeners or run the scheduler. It prints ``OK``, ``WARNING``,
    ``ERROR`` and ``NOT CONFIGURED`` results. Exit status zero means all
-   required checks succeeded; non-zero means at least one check failed.
+   required checks succeeded; non-zero means at least one check failed. Remote
+   SSH and webhook entries are checked structurally only; use the optional
+   Caddy playbook or the procedures in :doc:`remote-bells` for DNS and TLS
+   connectivity checks.
 
 ``--play WAV_KEY``
    Play one configured local WAVE key and exit. This deliberate manual action
@@ -43,6 +46,14 @@ Diagnostic and one-off actions
    are supplied. ``--test`` can run alongside ``school-bell.service`` when
    they do not claim the same GPIO pins. If a configured pin is already in
    use, stop the service before retrying the test.
+
+   This is not a remote-bell test mode. Normal initialization and scheduling
+   continue after the local tests. A legacy top-level SSH ``trigger`` is
+   therefore checked with remote ``aplay --help`` during startup, just as in a
+   normal run. Configured schedules can subsequently invoke those SSH targets,
+   and pressing a configured manual button can invoke its SSH or webhook
+   ``remote_bells``. Combine ``--test`` with ``--check`` when only
+   non-operational validation is intended; ``--check`` takes precedence.
 
 ``--debug``
    Enable verbose local logging. It can reveal hostnames and operational

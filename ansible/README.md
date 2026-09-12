@@ -28,9 +28,12 @@ data. Updating or reinstalling the application must not reset its schedule.
 | `update.yml` | Never creates or modifies it. Records its SHA-256 checksum before updating the code and verifies the checksum before restarting the service. |
 | `restart.yml` | Does not read or modify it. |
 | `configure.yml` | Intentionally deploys a supplied schema, backs up the previous file, and restarts the service when its contents change. |
+| `caddy.yml` | Reads it only to require an enabled loopback webhook; never modifies it. |
 
 Use `install.yml` or `update.yml` for application deployments. Use
 `configure.yml` only when changing a device's schedule intentionally.
+The optional `caddy.yml` playbook configures HTTPS independently and does not
+change `schema.json`.
 
 Run the one-time Raspberry Pi setup, then install the application:
 
@@ -238,6 +241,92 @@ ansible-playbook -i inventory ansible/update.yml --limit school_bells
 ansible-playbook -i inventory ansible/restart.yml --limit pibell-yard
 ```
 
+## Configure optional HTTPS webhooks
+
+`caddy.yml` is an explicit, optional deployment. Neither `init.yml` nor
+`install.yml` installs Caddy or enables HTTPS. Before running it:
+
+1. Give every node a fixed DHCP reservation.
+2. Create an internal DNS A record for every `caddy_hostname`.
+3. Enable the School Bell webhook on `127.0.0.1` in `schema.json`.
+4. Issue a distinct leaf certificate for every hostname from one controlled
+   internal CA.
+
+Keep the CA private key outside this repository and off every bell node. The
+playbook requires only the public CA certificate plus the selected node's own
+certificate and private key.
+
+The following YAML inventory variables are easier to audit than long inline
+host entries. Store them in `host_vars/pibell-yard.yml`, or encrypt the file
+with Ansible Vault when appropriate:
+
+```yaml
+caddy_hostname: pibell-yard.school-bell.internal
+school_bell_caddy_ca_cert_src: /secure/pki/root.crt
+school_bell_caddy_cert_src: /secure/pki/pibell-yard-fullchain.crt
+school_bell_caddy_key_src: /secure/pki/pibell-yard.key
+```
+
+When internal DNS is unavailable, define a controlled hosts-file fallback on
+the nodes that must call other bells:
+
+```yaml
+school_bell_caddy_hosts:
+  - address: 192.0.2.41
+    hostname: pibell-main.school-bell.internal
+  - address: 192.0.2.42
+    hostname: pibell-yard.school-bell.internal
+```
+
+Ansible maintains a marked block in `/etc/hosts`. When the Raspberry Pi uses a
+cloud-init-managed hosts file, it updates
+`/etc/cloud/templates/hosts.debian.tmpl` as well so the entries survive
+regeneration. Prefer DNS and leave this list empty when DNS is reliable.
+
+The leaf certificate must contain `caddy_hostname` as a DNS subject alternative
+name. If it was signed by an intermediate, the certificate source must contain
+the leaf followed by its intermediate chain. The source paths are on the
+Ansible controller. Apply the playbook to one receiving node first:
+
+```sh
+ansible-playbook -i inventory ansible/caddy.yml --limit pibell-yard
+```
+
+The playbook:
+
+- checks the controller-side certificate inputs before changing the node;
+- refuses a webhook that is disabled, non-loopback, or on an unexpected port;
+- installs Caddy from its official stable repository;
+- installs `bind9-dnsutils` for immediate DNS troubleshooting;
+- installs the public root in the operating-system trust store;
+- deploys the leaf key as `root:caddy` with mode `0640`;
+- validates the certificate hostname and Caddy configuration;
+- adds a School Bell systemd drop-in pointing Python `requests` at
+  `/etc/ssl/certs/ca-certificates.crt`;
+- verifies that systemd loaded the CA bundle environment setting;
+- checks DNS with the system resolver;
+- verifies `GET /bell` returns `405` without ringing the bell;
+- repeats the HTTPS check with School Bell's service user and virtualenv.
+
+Remote webhook URLs use the standard HTTPS port and must not retain the local
+backend port:
+
+```text
+https://pibell-yard.school-bell.internal/bell
+```
+
+For DNS diagnosis, compare the direct and system-resolver results:
+
+```sh
+dig +noall +answer pibell-yard.school-bell.internal A
+getent ahostsv4 pibell-yard.school-bell.internal
+```
+
+An A record returns an address such as `192.0.2.42`; a CNAME whose target is
+`192.0.2.42.` is incorrect. Ensure every DNS server advertised by DHCP knows
+the same private records. See `docs/remote-bells.rst` for the complete manual
+procedure, CA fingerprint verification and runtime troubleshooting.
+
 Variables can be set in inventory/group variables or with `-e`:
 
 - `school_bell_user`: service account; defaults to `pi`. Its home directory and
@@ -252,3 +341,13 @@ Variables can be set in inventory/group variables or with `-e`:
   may overwrite `schema.json`.
 - `school_bell_debug`: add `--debug` to `ExecStart`; defaults to `false`.
 - `school_bell_test`: add `--test` to `ExecStart`; defaults to `false`.
+- `caddy_hostname`: required by `caddy.yml`; HTTPS DNS name present in the
+  node's certificate.
+- `school_bell_caddy_ca_cert_src`: controller-side public CA certificate.
+- `school_bell_caddy_cert_src`: controller-side host certificate.
+- `school_bell_caddy_key_src`: controller-side host private key.
+- `school_bell_caddy_hosts`: optional address and hostname mappings maintained
+  in `/etc/hosts`; default empty.
+- `school_bell_webhook_port`: loopback backend port; defaults to `8081`.
+- `school_bell_ca_bundle`: CA bundle exposed to Python `requests`; defaults to
+  `/etc/ssl/certs/ca-certificates.crt`.

@@ -14,6 +14,8 @@ Added
 
 * Added structured ``calendar_refresh`` and ``calendar_error`` events for
   OpenHolidays and iCalendar loading and evaluation.
+* Added optional Ansible deployment and verification of Caddy HTTPS webhook
+  termination with centrally issued, host-specific certificates.
 
 Changed
 ~~~~~~~

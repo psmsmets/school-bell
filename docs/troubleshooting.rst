@@ -86,6 +86,13 @@ token, request body and rate limit. A failed remote manual action should not
 delay or change its local bell action. Follow the end-to-end checks in
 :doc:`remote-bells`.
 
+If ``curl`` trusts a local HTTPS webhook but School Bell reports ``SSLError``,
+the virtual environment may be using a different CA bundle. Configure
+``REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`` in a systemd drop-in
+after installing the private CA in the operating-system trust store. Also
+remove the backend ``:8081`` port from an HTTPS remote URL; Caddy listens on
+the default HTTPS port 443.
+
 Calendar data is unavailable
 ----------------------------
 
