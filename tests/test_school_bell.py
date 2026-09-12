@@ -890,6 +890,34 @@ def test_empty_openholidays_result_is_available_cache(
     assert error['last_success_at'] == last_success_at
 
 
+def test_is_holiday_does_not_refresh_successful_empty_cache(
+    structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+    calls = []
+
+    def empty_response(*args, **kwargs):
+        calls.append((args, kwargs))
+        return []
+
+    monkeypatch.setattr(bell.openholidays, 'holidays', empty_response)
+
+    assert bell._request_holidays() is True
+    assert bell.is_holiday(school_bell_module.datetime.date(2026, 9, 14)) is False
+    assert bell.is_holiday(school_bell_module.datetime.date(2026, 9, 15)) is False
+
+    assert len(calls) == 1
+    refresh_events = [
+        event for event in structured_events
+        if event['event'] == 'calendar_refresh'
+    ]
+    assert len(refresh_events) == 1
+    assert refresh_events[0]['item_count'] == 0
+
+
 @pytest.mark.parametrize('malformed', [None, {}, 'not a holiday list'])
 def test_malformed_openholidays_response_without_cache_emits_parse_error(
     malformed, structured_events, monkeypatch

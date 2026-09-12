@@ -917,7 +917,7 @@ class SchoolBell(object):
             self.log.debug("  return holiday status from cache")
             return self.__is_holiday
 
-        if not self.holidays:
+        if self.__holidays_last_success_at is None:
             self.log.debug("  no holiday list found -> request")
             if not self._request_holidays():
                 return False
