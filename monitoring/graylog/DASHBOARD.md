@@ -19,6 +19,7 @@ descending order for tables containing that metric.
 | Installed versions | `sb_event:health_status` | Data table | Rows: `sb_version`, `sb_device_id`; metric: `max(timestamp)`; range: 24 hours |
 | Successful rings | `sb_event:bell_ring AND sb_status:success` | Bar chart | Row: `timestamp` with automatic interval; series/group: `sb_device_id`; metric: `count()`; range: 7 days |
 | Last successful ring | `sb_event:bell_ring AND sb_status:success` | Data table | Row: `sb_device_id`; metric: `max(timestamp)`; range: 7 days |
+| Calendar status | `sb_event:(calendar_refresh OR calendar_error)` | Data table | Rows: `sb_device_id`, `sb_calendar_source`, `sb_status`, `sb_operation`; metric: `max(timestamp)`; range: 7 days |
 | Failures by bell and type | `sb_status:failure` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_error_category`; metric: `count()`; range: 7 days |
 | Skipped bells | `sb_status:skipped` | Data table | Rows: `sb_device_id`, `sb_event`, `sb_skip_reason`; metric: `count()`; range: 7 days |
 | Service restarts | `sb_event:service_started` | Data table | Row: `sb_device_id`; metrics: `count()`, `max(timestamp)`; range: 7 days |
@@ -35,6 +36,13 @@ Place the two single-number widgets at the top, followed by the heartbeat and
 version tables. Put the ring chart across the full dashboard width. The failure
 and recent-event tables belong at the bottom because they are primarily used
 for investigation.
+
+For a compact operational-success overview that includes successful calendar
+refreshes without heartbeat and schedule-inventory noise, use:
+
+```text
+sb_status:success AND NOT (sb_event:health_status OR sb_event:schedule_entry_loaded)
+```
 
 ## Interval and timezone of the weekly charts
 

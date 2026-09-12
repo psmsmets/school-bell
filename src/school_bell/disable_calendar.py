@@ -3,13 +3,17 @@
 """Public iCalendar based bell suppression."""
 
 import datetime
+import logging
 from threading import RLock
+from time import monotonic
 from urllib.parse import urlsplit
 
 import pytz
 import recurring_ical_events
 import requests
 from icalendar import Calendar
+
+from .monitoring import log_event
 
 
 __all__ = ['DisableCalendar']
@@ -52,29 +56,20 @@ class DisableCalendar(object):
 
     def refresh(self) -> bool:
         """Refresh the calendar, retaining the previous cache on failure."""
+        started = monotonic()
         try:
             response = requests.get(self.__url, timeout=self.__timeout)
             response.raise_for_status()
+        except Exception as err:
+            self._log_calendar_error(err, 'fetch', started)
+            return False
+
+        try:
             calendar = Calendar.from_ical(response.content)
             if getattr(calendar, 'name', None) != 'VCALENDAR':
                 raise ValueError('response is not an iCalendar calendar')
         except Exception as err:
-            # Request exception strings often contain the complete secret URL.
-            if self.__logger:
-                if self.available:
-                    self.__logger.warning(
-                        'Public calendar refresh failed; using cached '
-                        'calendar data.'
-                    )
-                else:
-                    self.__logger.warning(
-                        'Public calendar refresh failed; no cached calendar '
-                        'data available. Bells remain enabled.'
-                    )
-                self.__logger.debug(
-                    'Public calendar failure category: %s',
-                    type(err).__name__,
-                )
+            self._log_calendar_error(err, 'parse', started)
             return False
 
         with self.__lock:
@@ -83,8 +78,49 @@ class DisableCalendar(object):
                 datetime.timezone.utc
             )
         if self.__logger:
-            self.__logger.info('Public calendar refreshed successfully.')
+            log_event(
+                self.__logger,
+                'calendar_refresh',
+                message='Public calendar refreshed successfully.',
+                calendar_source='ical',
+                operation='refresh',
+                cache_available=True,
+                last_success_at=self.last_update.isoformat(),
+                item_count=len(calendar.walk('VEVENT')),
+                duration_ms=round((monotonic() - started) * 1000),
+            )
         return True
+
+    def _log_calendar_error(self, err, operation, started=None):
+        """Log a safe structured error without exposing the calendar URL."""
+        if not self.__logger:
+            return
+        available = self.available
+        message = (
+            'Public calendar refresh failed; using cached calendar data.'
+            if available else
+            'Public calendar refresh failed; no cached calendar data '
+            'available. Bells remain enabled.'
+        )
+        fields = {
+            'calendar_source': 'ical',
+            'operation': operation,
+            'error_category': type(err).__name__,
+            'cache_available': available,
+            'last_success_at': (
+                self.last_update.isoformat() if self.last_update else None
+            ),
+        }
+        if started is not None:
+            fields['duration_ms'] = round((monotonic() - started) * 1000)
+        log_event(
+            self.__logger,
+            'calendar_error',
+            status='failure',
+            level=logging.WARNING,
+            message=message,
+            **fields,
+        )
 
     def blocking_event(self, moment: datetime.datetime = None):
         """Return event details when an occurrence covers ``moment``."""
@@ -101,13 +137,23 @@ class DisableCalendar(object):
             )
         except Exception as err:
             if self.__logger:
-                self.__logger.warning(
-                    'Public calendar data could not be evaluated; bells '
-                    'remain enabled.'
-                )
-                self.__logger.debug(
-                    'Public calendar evaluation failure category: %s',
-                    type(err).__name__,
+                log_event(
+                    self.__logger,
+                    'calendar_error',
+                    status='failure',
+                    level=logging.WARNING,
+                    message=(
+                        'Public calendar data could not be evaluated; bells '
+                        'remain enabled.'
+                    ),
+                    calendar_source='ical',
+                    operation='evaluate',
+                    error_category=type(err).__name__,
+                    cache_available=True,
+                    last_success_at=(
+                        self.last_update.isoformat()
+                        if self.last_update else None
+                    ),
                 )
             return None
 
