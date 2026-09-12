@@ -6,6 +6,21 @@ commit history. Older releases did not include contemporary release notes, so
 the descriptions below only summarize changes that can be verified from the
 repository.
 
+Unreleased
+----------
+
+Added
+~~~~~
+
+* Added structured ``calendar_refresh`` and ``calendar_error`` events for
+  OpenHolidays and iCalendar loading and evaluation.
+
+Changed
+~~~~~~~
+
+* Updated the Graylog operational-success view to include successful calendar
+  refreshes while excluding heartbeat and schedule-inventory noise.
+
 1.0.0 — 2026-09-11
 ------------------
 
