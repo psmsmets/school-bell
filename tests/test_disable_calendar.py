@@ -52,7 +52,7 @@ def calendar_events(monkeypatch):
     return events
 
 
-def calendar_with(monkeypatch, content):
+def calendar_with(monkeypatch, content, logger=None):
     monkeypatch.setattr(
         calendar_module.requests,
         'get',
@@ -61,6 +61,7 @@ def calendar_with(monkeypatch, content):
     calendar = DisableCalendar(
         'https://calendar.example/private-token/basic.ics',
         timezone='Europe/Brussels',
+        logger=logger,
     )
     assert calendar.refresh() is True
     return calendar
@@ -280,9 +281,9 @@ def test_calendar_evaluation_failure_emits_structured_event(
         calendar_module.requests,
         'get',
         lambda *_args, **_kwargs: Response(ics(event(
-        'UID:evaluation@example.com',
-        'DTSTART;VALUE=DATE:20260914',
-        'SUMMARY:Evaluation test',
+            'UID:evaluation@example.com',
+            'DTSTART;VALUE=DATE:20260914',
+            'SUMMARY:Evaluation test',
         ))),
     )
     calendar = DisableCalendar(
@@ -304,6 +305,98 @@ def test_calendar_evaluation_failure_emits_structured_event(
     assert error['status'] == 'failure'
     assert error['operation'] == 'evaluate'
     assert error['error_category'] == 'ValueError'
+
+
+def test_repeated_calendar_evaluation_failure_is_logged_once_per_category(
+    monkeypatch, calendar_events
+):
+    calendar = calendar_with(monkeypatch, ics(event(
+        'UID:repeated-evaluation@example.com',
+        'DTSTART;VALUE=DATE:20260914',
+        'SUMMARY:Evaluation test',
+    )), logger=logging.getLogger('calendar-repeated-evaluation-test'))
+    failures = iter([
+        ValueError('broken recurrence'),
+        ValueError('broken recurrence'),
+        TypeError('invalid recurrence'),
+        TypeError('invalid recurrence'),
+    ])
+    monkeypatch.setattr(
+        calendar_module.recurring_ical_events,
+        'of',
+        lambda *_args: (_ for _ in ()).throw(next(failures)),
+    )
+
+    for _ in range(4):
+        assert calendar.blocking_event(
+            datetime.datetime(2026, 9, 14, 12, tzinfo=TZ)
+        ) is None
+
+    errors = [event for event in calendar_events
+              if event['event'] == 'calendar_error']
+    assert [event['error_category'] for event in errors] == [
+        'ValueError', 'TypeError',
+    ]
+
+
+def test_evaluation_error_suppression_resets_after_successful_evaluation(
+    monkeypatch, calendar_events
+):
+    calendar = calendar_with(monkeypatch, ics(event(
+        'UID:evaluation-recovery@example.com',
+        'DTSTART;VALUE=DATE:20260914',
+        'SUMMARY:Evaluation test',
+    )), logger=logging.getLogger('calendar-evaluation-recovery-test'))
+    original_of = calendar_module.recurring_ical_events.of
+
+    def fail(*_args):
+        raise ValueError('broken recurrence')
+
+    monkeypatch.setattr(calendar_module.recurring_ical_events, 'of', fail)
+    assert calendar.blocking_event(
+        datetime.datetime(2026, 9, 14, 12, tzinfo=TZ)
+    ) is None
+    monkeypatch.setattr(calendar_module.recurring_ical_events, 'of', original_of)
+    assert calendar.blocking_event(
+        datetime.datetime(2026, 9, 14, 12, tzinfo=TZ)
+    ) is not None
+    monkeypatch.setattr(calendar_module.recurring_ical_events, 'of', fail)
+    assert calendar.blocking_event(
+        datetime.datetime(2026, 9, 14, 12, tzinfo=TZ)
+    ) is None
+
+    errors = [event for event in calendar_events
+              if event['event'] == 'calendar_error']
+    assert len(errors) == 2
+
+
+def test_evaluation_error_suppression_resets_after_successful_refresh(
+    monkeypatch, calendar_events
+):
+    content = ics(event(
+        'UID:refresh-recovery@example.com',
+        'DTSTART;VALUE=DATE:20260914',
+        'SUMMARY:Evaluation test',
+    ))
+    calendar = calendar_with(
+        monkeypatch,
+        content,
+        logger=logging.getLogger('calendar-refresh-recovery-test'),
+    )
+    monkeypatch.setattr(
+        calendar_module.recurring_ical_events,
+        'of',
+        lambda *_args: (_ for _ in ()).throw(ValueError('broken recurrence')),
+    )
+
+    assert calendar.blocking_event() is None
+    assert calendar.blocking_event() is None
+    assert calendar.refresh() is True
+    assert calendar.blocking_event() is None
+
+    errors = [event for event in calendar_events
+              if event['event'] == 'calendar_error']
+    assert len(errors) == 2
 
 
 def test_cancelled_standalone_event_is_ignored(monkeypatch):
