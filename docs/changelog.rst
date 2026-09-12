@@ -6,14 +6,15 @@ commit history. Older releases did not include contemporary release notes, so
 the descriptions below only summarize changes that can be verified from the
 repository.
 
-Unreleased
-----------
+1.1.0 — 2026-09-12
+------------------
 
 Added
 ~~~~~
 
 * Added structured ``calendar_refresh`` and ``calendar_error`` events for
   OpenHolidays and iCalendar loading and evaluation.
+* Added a calendar-status widget to the Graylog monitoring content pack.
 * Added optional Ansible deployment and verification of Caddy HTTPS webhook
   termination with centrally issued, host-specific certificates.
 
@@ -22,6 +23,16 @@ Changed
 
 * Updated the Graylog operational-success view to include successful calendar
   refreshes while excluding heartbeat and schedule-inventory noise.
+
+Fixed
+~~~~~
+
+* Limited repeated iCalendar evaluation errors to one event per loaded
+  calendar and error category, with suppression reset after recovery.
+* Rejected malformed OpenHolidays response shapes without replacing valid
+  cached holiday data.
+* Treated successful empty OpenHolidays responses as valid cached data,
+  preventing a refresh for every scheduled bell.
 
 1.0.0 — 2026-09-11
 ------------------
