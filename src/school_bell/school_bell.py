@@ -845,11 +845,14 @@ class SchoolBell(object):
 
         self.log.info(f"request holidays from {startDate} until {endDate}")
         try:
-            self.__holidays = self.openholidays.holidays(
+            holidays = self.openholidays.holidays(
                 str(startDate), str(endDate),
                 timeout=self.timeout,
                 **kwargs
             )
+            if not isinstance(holidays, list):
+                raise TypeError('OpenHolidays response should be a list')
+            self.__holidays = holidays
             self.__holidays_last_update = startDate
             self.__holidays_last_success_at = datetime.datetime.now(
                 datetime.timezone.utc
@@ -868,7 +871,11 @@ class SchoolBell(object):
                 duration_ms=round((monotonic() - started) * 1000),
             )
             return True
-        except (requests.exceptions.RequestException, ValueError) as err:
+        except (
+            requests.exceptions.RequestException,
+            TypeError,
+            ValueError,
+        ) as err:
             log_event(
                 self.log,
                 'calendar_error',

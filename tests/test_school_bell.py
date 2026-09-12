@@ -888,3 +888,60 @@ def test_empty_openholidays_result_is_available_cache(
     error = structured_events[-1]
     assert error['cache_available'] is True
     assert error['last_success_at'] == last_success_at
+
+
+@pytest.mark.parametrize('malformed', [None, {}, 'not a holiday list'])
+def test_malformed_openholidays_response_without_cache_emits_parse_error(
+    malformed, structured_events, monkeypatch
+):
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+    monkeypatch.setattr(
+        bell.openholidays,
+        'holidays',
+        lambda *_args, **_kwargs: malformed,
+    )
+
+    assert bell._request_holidays() is False
+    assert bell.holidays == []
+    error = structured_events[-1]
+    assert error['event'] == 'calendar_error'
+    assert error['status'] == 'failure'
+    assert error['calendar_source'] == 'openholidays'
+    assert error['operation'] == 'parse'
+    assert error['error_category'] == 'TypeError'
+    assert error['cache_available'] is False
+    assert error['last_success_at'] is None
+
+
+@pytest.mark.parametrize('malformed', [None, {}, 'not a holiday list'])
+def test_malformed_openholidays_response_preserves_cached_data(
+    malformed, structured_events, monkeypatch
+):
+    cached = [{'name': 'Autumn break'}]
+    responses = iter([cached, malformed])
+    bell = SchoolBell(
+        schedule={}, wav={}, root=f"{getcwd()}/samples",
+        holidays='BE-NL', check=True,
+    )
+    monkeypatch.setattr(
+        bell.openholidays,
+        'holidays',
+        lambda *_args, **_kwargs: next(responses),
+    )
+
+    assert bell._request_holidays() is True
+    last_success_at = structured_events[-1]['last_success_at']
+    assert bell._request_holidays() is False
+
+    assert bell.holidays is cached
+    error = structured_events[-1]
+    assert error['event'] == 'calendar_error'
+    assert error['status'] == 'failure'
+    assert error['calendar_source'] == 'openholidays'
+    assert error['operation'] == 'parse'
+    assert error['error_category'] == 'TypeError'
+    assert error['cache_available'] is True
+    assert error['last_success_at'] == last_success_at
