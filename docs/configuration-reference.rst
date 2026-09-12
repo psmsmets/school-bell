@@ -235,9 +235,10 @@ Remote webhook entry
    Required value ``webhook``.
 
 ``url``
-   Required HTTP(S) endpoint URL. On trusted local networks, a stable local IP
-   address avoids hostname or mDNS lookup latency. A hostname remains suitable
-   when local name resolution is reliable and ease of renumbering is preferred.
+   Required HTTP(S) endpoint URL. Use a DNS hostname matching the certificate
+   for HTTPS. The sending service must trust its issuing CA; see
+   :ref:`expose-bell-webhook`. A stable IP can avoid name-resolution latency
+   for deliberately unencrypted HTTP on a trusted local network.
 
 ``headers``
    Optional string-to-string object for additional request headers; default

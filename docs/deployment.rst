@@ -148,6 +148,77 @@ schedule change.
 replacement is available for deliberate reinstallations, but regular schedule
 changes should use ``configure.yml`` because its intent is clearer.
 
+Optional HTTPS webhooks
+-----------------------
+
+HTTPS is deliberately separate from the normal installation. First configure
+internal DNS A records and enable the built-in webhook on ``127.0.0.1``. Issue
+one certificate per hostname from a controlled internal CA. Store the CA
+private key outside the repository and never copy it to a bell node.
+
+Add the HTTPS hostname to the inventory and set controller-side certificate
+paths in encrypted host variables:
+
+.. code-block:: ini
+
+   [school_bells]
+   pibell-main ansible_host=192.0.2.41 caddy_hostname=pibell-main.school-bell.internal
+   pibell-yard ansible_host=192.0.2.42 caddy_hostname=pibell-yard.school-bell.internal
+
+.. code-block:: yaml
+
+   # host_vars/pibell-yard.yml
+   school_bell_caddy_ca_cert_src: /secure/pki/root.crt
+   school_bell_caddy_cert_src: /secure/pki/pibell-yard-fullchain.crt
+   school_bell_caddy_key_src: /secure/pki/pibell-yard.key
+
+If internal DNS is unavailable, an optional fallback can be placed in host
+variables:
+
+.. code-block:: yaml
+
+   school_bell_caddy_hosts:
+     - address: 192.0.2.41
+       hostname: pibell-main.school-bell.internal
+     - address: 192.0.2.42
+       hostname: pibell-yard.school-bell.internal
+
+This maintains a marked ``/etc/hosts`` block and also updates the Debian
+cloud-init hosts template when present. Leave the list empty when internal DNS
+is reliable.
+
+The certificate must include ``caddy_hostname`` as a DNS subject alternative
+name. When an intermediate CA signed it, the certificate source must contain
+the leaf followed by its intermediate chain. Protect inventory and leaf keys
+with appropriate controller permissions; Ansible copies each key as
+``root:caddy`` with mode ``0640``.
+
+Roll out one node first:
+
+.. code-block:: console
+
+   ansible-playbook -i inventory ansible/caddy.yml --limit pibell-yard
+
+The playbook refuses to continue unless the School Bell configuration already
+enables the webhook on loopback. It installs the official Caddy repository,
+Caddy, ``bind9-dnsutils``, the host certificate and the public CA. It also adds
+``REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`` as a systemd drop-in
+because Python ``requests`` may not otherwise use locally installed roots.
+
+Verification resolves the configured hostname, checks the certificate name,
+confirms that systemd loaded the CA bundle setting, expects a safe ``405``
+response from ``GET /bell``, and repeats that request with the same virtual
+environment and service account used by School Bell. The playbook never sends
+``POST /bell`` and therefore does not ring a bell.
+
+Configure remote webhook URLs without the backend port:
+
+.. code-block:: text
+
+   https://pibell-yard.school-bell.internal/bell
+
+See :ref:`expose-bell-webhook` for the manual procedure and troubleshooting.
+
 Backup and restore
 ------------------
 
@@ -191,6 +262,7 @@ Playbook           Purpose
 ``backup.yml``     Download configuration and optionally samples.
 ``restore.yml``    Guarded restore of configuration and/or samples.
 ``restart.yml``    Explicitly restart and enable the systemd service.
+``caddy.yml``      Optionally deploy and verify HTTPS webhook termination.
 =================  ==========================================================
 
 Common variables

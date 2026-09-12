@@ -1,0 +1,358 @@
+---
+- name: Configure optional HTTPS webhooks with Caddy
+  hosts: all
+  vars:
+    school_bell_user: pi
+    school_bell_config_name: schema.json
+    school_bell_webhook_port: 8081
+    school_bell_caddy_ca_cert_src: ""
+    school_bell_caddy_cert_src: ""
+    school_bell_caddy_key_src: ""
+    school_bell_caddy_hosts: []
+    school_bell_ca_bundle: /etc/ssl/certs/ca-certificates.crt
+    school_bell_caddy_keyring: >-
+      /usr/share/keyrings/caddy-stable-archive-keyring.asc
+    school_bell_caddy_repository: >-
+      deb [signed-by={{ school_bell_caddy_keyring }}]
+      https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+
+  pre_tasks:
+    - name: Require explicit Caddy and certificate variables
+      ansible.builtin.assert:
+        that:
+          - caddy_hostname is defined
+          - caddy_hostname | length > 0
+          - caddy_hostname is match('^[A-Za-z0-9.-]+$')
+          - school_bell_caddy_ca_cert_src | length > 0
+          - school_bell_caddy_cert_src | length > 0
+          - school_bell_caddy_key_src | length > 0
+        fail_msg: >-
+          Set caddy_hostname and controller-side CA certificate, host
+          certificate and host private-key source paths. See ansible/README.md.
+
+    - name: Check controller-side TLS files
+      delegate_to: localhost
+      become: false
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ school_bell_caddy_ca_cert_src }}"
+        - "{{ school_bell_caddy_cert_src }}"
+        - "{{ school_bell_caddy_key_src }}"
+      register: school_bell_caddy_tls_sources
+
+    - name: Require regular controller-side TLS files
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists | default(false)
+          - item.stat.isreg | default(false)
+        fail_msg: "Required controller-side TLS file is absent or not regular."
+      loop: "{{ school_bell_caddy_tls_sources.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read School Bell user account
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ school_bell_user }}"
+
+    - name: Determine School Bell configuration path
+      ansible.builtin.set_fact:
+        school_bell_home: "{{ ansible_facts.getent_passwd[school_bell_user][4] }}"
+        school_bell_config_path: >-
+          {{ ansible_facts.getent_passwd[school_bell_user][4] }}/{{ school_bell_config_name }}
+
+    - name: Read School Bell configuration
+      become: true
+      ansible.builtin.slurp:
+        src: "{{ school_bell_config_path }}"
+      register: school_bell_caddy_config_file
+      no_log: true
+
+    - name: Decode School Bell configuration
+      ansible.builtin.set_fact:
+        school_bell_caddy_config: >-
+          {{ school_bell_caddy_config_file.content | b64decode | from_json }}
+      no_log: true
+
+    - name: Validate optional static hostname entries
+      ansible.builtin.assert:
+        that:
+          - item.address is defined
+          - item.address | string | length > 0
+          - item.hostname is defined
+          - item.hostname is match('^[A-Za-z0-9.-]+$')
+        fail_msg: >-
+          Each school_bell_caddy_hosts entry requires a non-empty address and
+          a valid hostname.
+      loop: "{{ school_bell_caddy_hosts }}"
+      loop_control:
+        label: "{{ item.hostname | default('invalid entry') }}"
+
+    - name: Require a loopback-only webhook backend
+      ansible.builtin.assert:
+        that:
+          - school_bell_caddy_config.webhook is defined
+          - school_bell_caddy_config.webhook.enabled | default(false) | bool
+          - school_bell_caddy_config.webhook.host | default('') == '127.0.0.1'
+          - >-
+            school_bell_caddy_config.webhook.port |
+            default(8081) | int == school_bell_webhook_port | int
+        fail_msg: >-
+          Enable the School Bell webhook on 127.0.0.1 and make its port match
+          school_bell_webhook_port before configuring Caddy.
+
+  tasks:
+    - name: Install Caddy repository prerequisites and diagnostics
+      become: true
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - bind9-dnsutils
+          - ca-certificates
+          - curl
+          - debian-archive-keyring
+          - debian-keyring
+          - openssl
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install Caddy repository signing key
+      become: true
+      ansible.builtin.get_url:
+        url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+        dest: "{{ school_bell_caddy_keyring }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Configure Caddy stable repository
+      become: true
+      ansible.builtin.apt_repository:
+        repo: "{{ school_bell_caddy_repository }}"
+        filename: caddy-stable
+        state: present
+        update_cache: true
+
+    - name: Install Caddy
+      become: true
+      ansible.builtin.apt:
+        name: caddy
+        state: present
+
+    - name: Check for a cloud-init hosts template
+      become: true
+      ansible.builtin.stat:
+        path: /etc/cloud/templates/hosts.debian.tmpl
+      register: school_bell_cloud_init_hosts_template
+
+    - name: Configure optional static hostname entries
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE MANAGED SCHOOL BELL HTTPS HOSTS"
+        block: |
+          {% for host in school_bell_caddy_hosts %}
+          {{ host.address }} {{ host.hostname }}
+          {% endfor %}
+        state: "{{ 'present' if school_bell_caddy_hosts | length else 'absent' }}"
+
+    - name: Persist optional static entries through cloud-init
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/cloud/templates/hosts.debian.tmpl
+        marker: "# {mark} ANSIBLE MANAGED SCHOOL BELL HTTPS HOSTS"
+        block: |
+          {% for host in school_bell_caddy_hosts %}
+          {{ host.address }} {{ host.hostname }}
+          {% endfor %}
+        state: "{{ 'present' if school_bell_caddy_hosts | length else 'absent' }}"
+      when: school_bell_cloud_init_hosts_template.stat.exists | default(false)
+
+    - name: Create Caddy certificate directory
+      become: true
+      ansible.builtin.file:
+        path: /etc/caddy/certificates
+        state: directory
+        owner: root
+        group: caddy
+        mode: "0750"
+
+    - name: Install internal CA certificate
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_caddy_ca_cert_src }}"
+        dest: /usr/local/share/ca-certificates/school-bell-caddy.crt
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Update CA certificates
+        - Restart School Bell
+
+    - name: Install host certificate
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_caddy_cert_src }}"
+        dest: /etc/caddy/certificates/school-bell.crt
+        owner: root
+        group: caddy
+        mode: "0644"
+      notify: Restart Caddy
+
+    - name: Install host private key
+      become: true
+      ansible.builtin.copy:
+        src: "{{ school_bell_caddy_key_src }}"
+        dest: /etc/caddy/certificates/school-bell.key
+        owner: root
+        group: caddy
+        mode: "0640"
+      no_log: true
+      notify: Restart Caddy
+
+    - name: Verify certificate hostname
+      become: true
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -in
+          - /etc/caddy/certificates/school-bell.crt
+          - -noout
+          - -checkhost
+          - "{{ caddy_hostname }}"
+      changed_when: false
+
+    - name: Configure Caddy reverse proxy
+      become: true
+      ansible.builtin.template:
+        src: templates/Caddyfile.j2
+        dest: /etc/caddy/Caddyfile
+        owner: root
+        group: caddy
+        mode: "0644"
+        backup: true
+      notify: Restart Caddy
+
+    - name: Configure Requests to use the operating-system CA bundle
+      become: true
+      ansible.builtin.file:
+        path: /etc/systemd/system/school-bell.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install School Bell CA bundle drop-in
+      become: true
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/school-bell.service.d/https-ca.conf
+        content: |
+          [Service]
+          Environment="REQUESTS_CA_BUNDLE={{ school_bell_ca_bundle }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart School Bell
+
+    - name: Validate Caddy configuration
+      become: true
+      ansible.builtin.command:
+        argv:
+          - caddy
+          - validate
+          - --config
+          - /etc/caddy/Caddyfile
+      changed_when: false
+
+    - name: Apply trust and service changes before verification
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enable and start Caddy
+      become: true
+      ansible.builtin.systemd_service:
+        name: caddy
+        enabled: true
+        state: started
+
+    - name: Read loaded School Bell service environment
+      become: true
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - school-bell
+          - --property=Environment
+          - --value
+      register: school_bell_caddy_service_environment
+      changed_when: false
+
+    - name: Verify School Bell uses the operating-system CA bundle
+      ansible.builtin.assert:
+        that:
+          - >-
+            ('REQUESTS_CA_BUNDLE=' + school_bell_ca_bundle) in
+            school_bell_caddy_service_environment.stdout
+        fail_msg: >-
+          The School Bell systemd service did not load REQUESTS_CA_BUNDLE.
+
+    - name: Resolve configured HTTPS hostname through the system resolver
+      ansible.builtin.command:
+        argv:
+          - getent
+          - ahostsv4
+          - "{{ caddy_hostname }}"
+      changed_when: false
+
+    - name: Verify HTTPS endpoint without triggering the bell
+      ansible.builtin.uri:
+        url: "https://{{ caddy_hostname }}/bell"
+        method: GET
+        status_code: 405
+        validate_certs: true
+
+    - name: Verify HTTPS with the School Bell Python environment
+      become: true
+      become_user: "{{ school_bell_user }}"
+      environment:
+        REQUESTS_CA_BUNDLE: "{{ school_bell_ca_bundle }}"
+      ansible.builtin.command:
+        argv:
+          - "{{ school_bell_home }}/.local/bin/python"
+          - -c
+          - >-
+            import requests;
+            response = requests.get(
+                "https://{{ caddy_hostname }}/bell", timeout=5
+            );
+            assert response.status_code == 405, response.status_code
+      changed_when: false
+
+  handlers:
+    - name: Update CA certificates
+      become: true
+      ansible.builtin.command:
+        argv:
+          - update-ca-certificates
+
+    - name: Reload systemd
+      become: true
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Restart School Bell
+      become: true
+      ansible.builtin.systemd_service:
+        name: school-bell
+        state: restarted
+
+    - name: Restart Caddy
+      become: true
+      ansible.builtin.systemd_service:
+        name: caddy
+        state: restarted
+        enabled: true

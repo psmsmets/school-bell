@@ -152,8 +152,8 @@ it through a TLS reverse proxy such as nginx, Caddy or Apache. Configure
 certificate validation, request-size limits and trusted-network access at the
 proxy. Never expose the built-in port directly to an untrusted network.
 
-Local HTTPS with Caddy
-~~~~~~~~~~~~~~~~~~~~~~
+Manual HTTPS with Caddy's local CA
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Caddy can provide HTTPS without a public domain or internet-facing service. It
 creates a local certificate authority (CA), issues and renews the server
@@ -163,7 +163,7 @@ using the `official installation instructions`_, then create or extend
 
 .. code-block:: text
 
-   pibell-yard.local {
+   pibell-yard.school-bell.internal {
        tls internal
        request_body {
            max_size 4KB
@@ -172,9 +172,25 @@ using the `official installation instructions`_, then create or extend
    }
 
 Use a hostname that resolves to the receiving node from every sending node.
-Local DNS or mDNS can provide this; a controlled ``/etc/hosts`` entry is also
-sufficient. The hostname in the webhook URL must match the hostname in the
-Caddyfile.
+Create an A record in the internal DNS, for example
+``pibell-yard.school-bell.internal`` pointing to the node's fixed DHCP address.
+Do not create a CNAME whose target is an IP address. Avoid ``.local`` because
+it is reserved for mDNS. A controlled ``/etc/hosts`` entry can be used as a
+fallback, but internal DNS is preferable. The hostname in the webhook URL must
+match the hostname in the Caddyfile.
+
+Install DNS client tools when ``dig`` is not already available:
+
+.. code-block:: console
+
+   $ sudo apt install bind9-dnsutils
+   $ dig +noall +answer pibell-yard.school-bell.internal A
+   $ getent ahostsv4 pibell-yard.school-bell.internal
+
+The answer must be an A record containing the fixed IPv4 address. If multiple
+DNS servers are supplied through DHCP, every one of them must return the same
+private record. Do not advertise a public resolver as a fallback for private
+names.
 
 Validate and load the configuration:
 
@@ -201,12 +217,37 @@ run:
        /usr/local/share/ca-certificates/school-bell-caddy.crt
    $ sudo update-ca-certificates
 
+Compare ``openssl x509 -noout -fingerprint -sha256`` output before and after
+copying the root certificate. This verifies that the expected trust anchor is
+being installed.
+
+Python ``requests`` in the School Bell virtual environment may use its own CA
+bundle instead of the operating-system store used by ``curl``. If ``curl``
+succeeds but a remote bell reports ``SSLError``, add a systemd drop-in on the
+sending node:
+
+.. code-block:: console
+
+   $ sudo systemctl edit school-bell
+
+.. code-block:: ini
+
+   [Service]
+   Environment="REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt"
+
+Then reload systemd and restart School Bell:
+
+.. code-block:: console
+
+   $ sudo systemctl daemon-reload
+   $ sudo systemctl restart school-bell
+
 The bearer token remains required after enabling HTTPS. Test the complete path
 from a sending node, without disabling certificate verification:
 
 .. code-block:: console
 
-   $ curl -X POST https://pibell-yard.local/bell \
+   $ curl -X POST https://pibell-yard.school-bell.internal/bell \
        -H 'Authorization: Bearer replace-with-a-long-random-token' \
        -H 'Content-Type: application/json' \
        --data '{"wav_key":"lesson"}'
@@ -214,7 +255,27 @@ from a sending node, without disabling certificate verification:
 Keep Caddy's data directory persistent because it contains the local CA. Back
 up and protect it like other private key material. All proxied requests reach
 the built-in rate limiter from the loopback address, so its limit is shared by
-all clients using this proxy.
+all clients using this proxy. The external URL uses the default HTTPS port 443;
+do not retain the backend ``:8081`` port when changing a remote URL from HTTP
+to HTTPS.
+
+Automate Caddy with Ansible
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The optional ``ansible/caddy.yml`` playbook installs Caddy and DNS diagnostic
+tools, deploys a host-specific certificate and key, installs the public CA in
+the operating-system trust store, configures the School Bell systemd service
+to use that store, and performs DNS, TLS and Python ``requests`` checks. HTTPS
+is not enabled by ``init.yml`` or ``install.yml``.
+
+For managed deployments, issue every node a separate certificate from one
+controlled internal CA. Keep the CA private key outside the repository and off
+the bell nodes. Supply only the public CA certificate and each node's own leaf
+certificate and private key to the playbook. See :doc:`deployment` for the
+inventory variables and rollout command. This differs deliberately from the
+manual ``tls internal`` example: the manual procedure lets one Caddy instance
+own its local CA, while the managed procedure uses centrally issued
+certificates so no CA private key is distributed to bell nodes.
 
 Send exactly one configured WAVE key:
 
@@ -248,10 +309,14 @@ suppression and they do not automatically invoke the legacy top-level SSH
 Verify and diagnose
 -------------------
 
-#. Run ``school-bell /home/pi/schema.json --check`` on every node.
+#. Run ``school-bell /home/pi/schema.json --check`` on every node. This checks
+   remote configuration structure, but deliberately makes no remote SSH or
+   webhook connection.
 #. Test local audio and GPIO before adding a remote path.
 #. Test SSH as the systemd service user or test the webhook through its final
    TLS URL.
+#. If ``curl`` succeeds but the service reports ``SSLError``, inspect
+   ``REQUESTS_CA_BUNDLE`` in ``systemctl show school-bell``.
 #. Trigger one bell while another signal is active and confirm the expected
    ``409`` or skipped event.
 #. Inspect ``journalctl`` and the Graylog ``manual_remote_trigger``,
